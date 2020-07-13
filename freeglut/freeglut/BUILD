@@ -1,11 +1,4 @@
 # FIXME, only works on linux.
-
-cc_binary(
-    name = "callbackMaker",
-    srcs = ["progs/demos/CallbackMaker/CallbackMaker.c"],
-    deps = ["glut"]
-)
-
 cc_library(
     name = "glut",
     srcs = glob(
