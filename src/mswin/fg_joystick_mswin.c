@@ -28,12 +28,12 @@
 #include <GL/freeglut.h>
 #include "../fg_internal.h"
 
+// TODO: fix for Unicode build
 
-#if !defined(_WIN32_WCE)
+#if FALSE && !defined(_WIN32_WCE)
 #    include <windows.h>
 #    include <mmsystem.h>
 #    include <regstr.h>
-
 
 
 
@@ -117,9 +117,9 @@ void fgPlatformJoystickRawRead( SFG_Joystick* joy, int* buttons, float* axes )
 
 static int fghJoystickGetOEMProductName ( SFG_Joystick* joy, char *buf, int buf_sz )
 {
-    char buffer [ 256 ];
+    wchar_t buffer [ 256 ];
 
-    char OEMKey [ 256 ];
+    wchar_t OEMKey [ 256 ];
 
     HKEY  hKey;
     DWORD dwcb;
@@ -129,9 +129,14 @@ static int fghJoystickGetOEMProductName ( SFG_Joystick* joy, char *buf, int buf_
         return 0;
 
     /* Open .. MediaResources\CurrentJoystickSettings */
-    _snprintf ( buffer, sizeof(buffer), "%s\\%s\\%s",
-                REGSTR_PATH_JOYCONFIG, joy->pJoystick.jsCaps.szRegKey,
-                REGSTR_KEY_JOYCURR );
+    //_snprintf ( buffer, sizeof(buffer), "%ws\\%ws\\%ws",
+    //            REGSTR_PATH_JOYCONFIG, joy->pJoystick.jsCaps.szRegKey,
+    //            REGSTR_KEY_JOYCURR );
+	wcscpy(buffer, REGSTR_PATH_JOYCONFIG);
+	wcscat(buffer, _T("\\"));
+	wcsncpy(buffer + wcslen(buffer), joy->pJoystick.jsCaps.szRegKey, sizeof(buffer) / sizeof(buffer[0]) - wcslen(buffer) - wcslen(REGSTR_KEY_JOYCURR) - 1);
+	wcscat(buffer, _T("\\"));
+	wcscat(buffer, REGSTR_KEY_JOYCURR);
 
     lr = RegOpenKeyEx ( HKEY_LOCAL_MACHINE, buffer, 0, KEY_QUERY_VALUE, &hKey);
 
@@ -141,7 +146,7 @@ static int fghJoystickGetOEMProductName ( SFG_Joystick* joy, char *buf, int buf_
     dwcb = sizeof(OEMKey);
 
     /* JOYSTICKID1-16 is zero-based; registry entries for VJOYD are 1-based. */
-    _snprintf ( buffer, sizeof(buffer), "Joystick%d%s", joy->pJoystick.js_id + 1, REGSTR_VAL_JOYOEMNAME );
+    _snprintf ( buffer, sizeof(buffer), "Joystick%d%ws", joy->pJoystick.js_id + 1, REGSTR_VAL_JOYOEMNAME );
 
     lr = RegQueryValueEx ( hKey, buffer, 0, 0, (LPBYTE) OEMKey, &dwcb);
     RegCloseKey ( hKey );
@@ -149,7 +154,7 @@ static int fghJoystickGetOEMProductName ( SFG_Joystick* joy, char *buf, int buf_
     if ( lr != ERROR_SUCCESS ) return 0;
 
     /* Open OEM Key from ...MediaProperties */
-    _snprintf ( buffer, sizeof(buffer), "%s\\%s", REGSTR_PATH_JOYOEM, OEMKey );
+    _snprintf ( buffer, sizeof(buffer), "%ws\\%s", REGSTR_PATH_JOYOEM, OEMKey );
 
     lr = RegOpenKeyEx ( HKEY_LOCAL_MACHINE, buffer, 0, KEY_QUERY_VALUE, &hKey );
 
@@ -260,5 +265,39 @@ void fgPlatformJoystickClose ( int ident )
 {
     /* Do nothing special */
 }
+
+#else
+
+void fgPlatformJoystickInit(SFG_Joystick* fgJoystick[], int ident)
+{
+	fgJoystick[ident]->num_axes = 0;
+	fgJoystick[ident]->error = GL_TRUE;
+}
+
+void fgPlatformJoystickOpen(SFG_Joystick* joy)
+{
+	joy->pJoystick.js.dwFlags = JOY_RETURNALL;
+	joy->pJoystick.js.dwSize = sizeof(joy->pJoystick.js);
+
+	memset(&joy->pJoystick.jsCaps, 0, sizeof(joy->pJoystick.jsCaps));
+
+	joy->error = TRUE;
+	joy->num_axes = 0;
+	joy->error = GL_TRUE;
+}
+
+
+
+void fgPlatformJoystickClose(int ident)
+{
+	/* Do nothing special */
+}
+
+
+void fgPlatformJoystickRawRead(SFG_Joystick* joy, int* buttons, float* axes)
+{
+	joy->error = GL_TRUE;
+}
+
 #endif
 

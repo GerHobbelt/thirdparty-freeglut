@@ -1077,6 +1077,8 @@ int fghIsLegacyContextRequested( void );
 void fghContextCreationError( void );
 int fghNumberOfAuxBuffersRequested( void );
 
+wchar_t* fghWstrFromStr(const char* str);
+
 #endif /* FREEGLUT_INTERNAL_H */
 
 /*** END OF FILE ***/

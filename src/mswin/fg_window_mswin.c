@@ -90,8 +90,7 @@ static pRegisterTouchWindow fghRegisterTouchWindow = (pRegisterTouchWindow)0xDEA
  * Setup the pixel format for a Win32 window
  */
 
-#if defined(_WIN32_WCE)
-static wchar_t* fghWstrFromStr(const char* str)
+wchar_t* fghWstrFromStr(const char* str)
 {
     int i,len=strlen(str);
     wchar_t* wstr = (wchar_t*)malloc(2*len+2);
@@ -100,7 +99,6 @@ static wchar_t* fghWstrFromStr(const char* str)
     wstr[len] = 0;
     return wstr;
 }
-#endif /* defined(_WIN32_WCE) */
 
 
 static void fghFillContextAttributes( int *attributes ) {
@@ -508,13 +506,20 @@ static BOOL CALLBACK m_proc(HMONITOR mon,
       res=GetMonitorInfo(mon,(LPMONITORINFO)&info);
       if( res )
       {
-          if( strcmp(dp->name,info.szDevice)==0 )
-          {
-              *(dp->x)=info.rcMonitor.left;
-              *(dp->y)=info.rcMonitor.top;
-              return FALSE;
-          }
-      }
+  		  wchar_t* wstr = fghWstrFromStr(dp->name);
+
+		  if( wcscmp(wstr,info.szDevice)==0 )
+		  {
+			  free(wstr);
+
+			  *(dp->x)=info.rcMonitor.left;
+			  *(dp->y)=info.rcMonitor.top;
+			  return FALSE;
+		  }
+
+		  free(wstr);
+	  }
+
       return TRUE;
 }
 
@@ -689,17 +694,23 @@ void fgPlatformOpenWindow( SFG_Window* window, const char* title,
         UpdateWindow(window->Window.Handle);
     }
 #else
-    window->Window.Handle = CreateWindowEx(
-        exFlags,
-        _T("FREEGLUT"),
-        title,
-        flags,
-        x, y, w, h,
-        (HWND) window->Parent == NULL ? NULL : window->Parent->Window.Handle,
-        (HMENU) NULL,
-        fgDisplay.pDisplay.Instance,
-        (LPVOID) window
-    );
+	{
+		wchar_t* wstr = fghWstrFromStr(title);
+
+		window->Window.Handle = CreateWindowEx(
+			exFlags,
+			_T("FREEGLUT"),
+			wstr,
+			flags,
+			x, y, w, h,
+			(HWND)window->Parent == NULL ? NULL : window->Parent->Window.Handle,
+			(HMENU)NULL,
+			fgDisplay.pDisplay.Instance,
+			(LPVOID)window
+		);
+
+		free(wstr);
+	}
 #endif /* defined(_WIN32_WCE) */
 
     /* WM_CREATE message got sent and was handled by window proc */
@@ -728,7 +739,7 @@ void fgPlatformOpenWindow( SFG_Window* window, const char* title,
     /* Enable multitouch: additional flag TWF_FINETOUCH, TWF_WANTPALM */
     #ifdef WM_TOUCH
         if (fghRegisterTouchWindow == (pRegisterTouchWindow)0xDEADBEEF) 
-			fghRegisterTouchWindow = (pRegisterTouchWindow)GetProcAddress(GetModuleHandle("user32"),"RegisterTouchWindow");
+			fghRegisterTouchWindow = (pRegisterTouchWindow)GetProcAddress(GetModuleHandle(_T("user32")),"RegisterTouchWindow");
 		if (fghRegisterTouchWindow)
              fghRegisterTouchWindow( window->Window.Handle, TWF_FINETOUCH | TWF_WANTPALM );
     #endif
@@ -810,7 +821,11 @@ void fgPlatformGlutSetWindowTitle( const char* title )
     }
 #else
     if (!IsIconic(fgStructure.CurrentWindow->Window.Handle))
-        SetWindowText( fgStructure.CurrentWindow->Window.Handle, title );
+	{
+		wchar_t* wstr = fghWstrFromStr(title);
+		SetWindowText(fgStructure.CurrentWindow->Window.Handle, wstr);
+		free(wstr);
+	}
 #endif
 
     /* Make copy of string to refer to later */
@@ -826,7 +841,7 @@ void fgPlatformGlutSetIconTitle( const char* title )
 {
 #ifndef _WIN32_WCE
     if (IsIconic(fgStructure.CurrentWindow->Window.Handle))
-        SetWindowText( fgStructure.CurrentWindow->Window.Handle, title );
+        SetWindowTextA( fgStructure.CurrentWindow->Window.Handle, title );
 #endif
 
     /* Make copy of string to refer to later */
@@ -840,7 +855,7 @@ void fgPlatformGlutSetIconTitle( const char* title )
 
 int FGAPIENTRY __glutCreateWindowWithExit( const char *title, void (__cdecl *exit_function)(int) )
 {
-  __glutExitFunc = exit_function;
-  return glutCreateWindow( title );
+    __glutExitFunc = exit_function;
+    return glutCreateWindow( title );
 }
 

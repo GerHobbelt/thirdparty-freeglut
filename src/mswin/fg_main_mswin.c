@@ -608,10 +608,10 @@ static void fghPlatformOnWindowStatusNotify(SFG_Window *window, GLboolean visSta
         {
             if (visState)
                 /* visible, set window title */
-                SetWindowText( window->Window.Handle, window->State.pWState.WindowTitle );
+                SetWindowTextA( window->Window.Handle, window->State.pWState.WindowTitle );
             else
                 /* not visible, set icon title */
-                SetWindowText( window->Window.Handle, window->State.pWState.IconTitle );
+                SetWindowTextA( window->Window.Handle, window->State.pWState.IconTitle );
         }
 
         notify = GL_TRUE;
@@ -1596,8 +1596,8 @@ LRESULT CALLBACK fgPlatformWindowProc( HWND hWnd, UINT uMsg, WPARAM wParam, LPAR
 		TOUCHINPUT* ti = (TOUCHINPUT*)malloc( sizeof(TOUCHINPUT)*numInputs);
 
 		if (fghGetTouchInputInfo == (pGetTouchInputInfo)0xDEADBEEF) {
-		    fghGetTouchInputInfo = (pGetTouchInputInfo)GetProcAddress(GetModuleHandle("user32"),"GetTouchInputInfo");
-		    fghCloseTouchInputHandle = (pCloseTouchInputHandle)GetProcAddress(GetModuleHandle("user32"),"CloseTouchInputHandle");
+		    fghGetTouchInputInfo = (pGetTouchInputInfo)GetProcAddress(GetModuleHandle(_T("user32")),"GetTouchInputInfo");
+		    fghCloseTouchInputHandle = (pCloseTouchInputHandle)GetProcAddress(GetModuleHandle(_T("user32")),"CloseTouchInputHandle");
 		}
 
 		if (!fghGetTouchInputInfo) { 
