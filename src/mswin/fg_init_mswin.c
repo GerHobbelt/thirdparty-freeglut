@@ -114,7 +114,7 @@ void fgPlatformInitialize( const char* displayName )
 	    fgWarning("fgPlatformInitialize: "
 		      "CreateDC failed, Screen size info may be incorrect\n"
           "This is quite likely caused by a bad '-display' parameter");
-      
+
     }
     /* Set the timer granularity to 1 ms */
     timeBeginPeriod ( 1 );
@@ -179,7 +179,7 @@ void fgPlatformDestroyContext ( SFG_PlatformDisplay pDisplay, SFG_WindowContextT
 
 void (__cdecl *__glutExitFunc)( int return_value ) = NULL;
 
-void FGAPIENTRY __glutInitWithExit( int *pargc, char **argv, void (__cdecl *exit_function)(int) )
+void FGAPIENTRY __glutInitWithExit( int *pargc, const char **argv, void (__cdecl *exit_function)(int) )
 {
   __glutExitFunc = exit_function;
   glutInit(pargc, argv);

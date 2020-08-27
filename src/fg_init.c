@@ -105,7 +105,7 @@ extern void fgPlatformDeinitialiseInputDevices ( void );
 extern void fgPlatformCloseDisplay ( void );
 extern void fgPlatformDestroyContext ( SFG_PlatformDisplay pDisplay, SFG_WindowContextType MContext );
 
-void fghParseCommandLineArguments ( int* pargc, char** argv, char **pDisplayName, char **pGeometry )
+void fghParseCommandLineArguments ( int* pargc, const char** argv, const char **pDisplayName, const char **pGeometry )
 {
 #ifndef _WIN32_WCE
     int i, j, argc = *pargc;
@@ -326,10 +326,10 @@ void fgDeinitialize( void )
  * Perform initialization. This usually happens on the program startup
  * and restarting after glutMainLoop termination...
  */
-void FGAPIENTRY glutInit( int* pargc, char** argv )
+void FGAPIENTRY glutInit( int* pargc, const char** argv )
 {
-    char* displayName = NULL;
-    char* geometry = NULL;
+	const char* displayName = NULL;
+	const char* geometry = NULL;
     if( fgState.Initialised )
         fgError( "illegal glutInit() reinitialization attempt" );
 
