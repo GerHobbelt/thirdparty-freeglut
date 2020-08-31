@@ -30,6 +30,9 @@
 
 #include <sys/types.h>
 #include <winbase.h>
+#if defined(_MSC_VER)
+#include <crtdbg.h>
+#endif
 
 typedef struct {
    HANDLE fh;

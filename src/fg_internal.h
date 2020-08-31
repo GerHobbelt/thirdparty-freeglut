@@ -120,6 +120,10 @@
 #    include <time.h>
 #endif
 
+#if defined(_MSC_VER)
+#include <crtdbg.h>
+#endif
+
 /* -- AUTOCONF HACKS --------------------------------------------------------*/
 
 /* XXX: Update autoconf to avoid these.
@@ -136,7 +140,9 @@
 
 #if defined(_MSC_VER) || defined(__WATCOMC__)
 /* strdup() is non-standard, for all but POSIX-2001 */
+#ifndef strdup
 #define strdup   _strdup
+#endif
 #endif
 
 /* M_PI is non-standard (defined by BSD, not ISO-C) */
