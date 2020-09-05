@@ -37,6 +37,7 @@
 
 
 
+
 void fgPlatformJoystickRawRead( SFG_Joystick* joy, int* buttons, float* axes )
 {
     MMRESULT status;

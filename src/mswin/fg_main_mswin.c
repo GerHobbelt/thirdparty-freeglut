@@ -762,19 +762,21 @@ static LRESULT fghWindowProcKeyPress(SFG_Window *window, UINT uMsg, GLboolean ke
 
 #if !defined(_WIN32_WCE)
     default:
-        /* Mapped characters are handled with the WM_CHAR message. Handle low-level ASCII press/release callbacks here. */
+        /* keydown displayable characters are handled with WM_CHAR message, but no corresponding up is generated. So get that here. */
+        if (!keydown)
         {
-            UINT ascii = (UINT)MapVirtualKey((UINT)wParam, MAPVK_VK_TO_CHAR);
-            if (ascii >= 32 && ascii < 256)
-            {
-				/* Always send lowercase (unshifted) values */
-				if (ascii >= 'A' && ascii <= 'Z')
-						ascii = ascii - 'A' + 'a';
-                if (keydown)
-                    INVOKE_WCB(*window, KeyboardDown, ((unsigned char)ascii, window->State.MouseX, window->State.MouseY) );
-                else
-                    INVOKE_WCB(*window, KeyboardUp, ((unsigned char)ascii, window->State.MouseX, window->State.MouseY) );
-            }
+            BYTE state[ 256 ];
+            WORD code[ 2 ];
+
+            GetKeyboardState( state );
+
+            if( ToAscii( (UINT)wParam, 0, state, code, 0 ) == 1 )
+                wParam=code[ 0 ];
+
+            INVOKE_WCB( *window, KeyboardUp,
+                   ( (char)(wParam & 0xFF), /* and with 0xFF to indicate to runtime that we want to strip out higher bits - otherwise we get a runtime error when "Smaller Type Checks" is enabled */
+                        window->State.MouseX, window->State.MouseY )
+            );
         }
 #endif
     }
@@ -1462,13 +1464,10 @@ LRESULT CALLBACK fgPlatformWindowProc( HWND hWnd, UINT uMsg, WPARAM wParam, LPAR
             break;
 
         fgState.Modifiers = fgPlatformGetModifiers( );
-        INVOKE_WCB( *window, KeyboardExt,
-                ( (int)wParam, window->State.MouseX, window->State.MouseY )
+        INVOKE_WCB( *window, Keyboard,
+                    ( (char)wParam,
+                      window->State.MouseX, window->State.MouseY )
         );
-        if (wParam < 256)
-            INVOKE_WCB( *window, Keyboard,
-                    ( (unsigned char)wParam, window->State.MouseX, window->State.MouseY )
-            );
         fgState.Modifiers = INVALID_MODIFIERS;
     }
     break;
@@ -1588,50 +1587,60 @@ LRESULT CALLBACK fgPlatformWindowProc( HWND hWnd, UINT uMsg, WPARAM wParam, LPAR
         break;
 
 #ifdef WM_TOUCH
-	/* handle multi-touch messages */
-	case WM_TOUCH:
-	{
-		unsigned int numInputs = (unsigned int)wParam;
-		unsigned int i = 0;
-		TOUCHINPUT* ti = (TOUCHINPUT*)malloc( sizeof(TOUCHINPUT)*numInputs);
+    /* handle multi-touch messages */
+    case WM_TOUCH:
+    {
+        unsigned int numInputs = (unsigned int)wParam;
+        unsigned int i = 0;
+        TOUCHINPUT* ti = (TOUCHINPUT*)malloc( sizeof(TOUCHINPUT)*numInputs);
 
-		if (fghGetTouchInputInfo == (pGetTouchInputInfo)0xDEADBEEF) {
+        if (fghGetTouchInputInfo == (pGetTouchInputInfo)0xDEADBEEF) {
 		    fghGetTouchInputInfo = (pGetTouchInputInfo)GetProcAddress(GetModuleHandle(_T("user32")),"GetTouchInputInfo");
 		    fghCloseTouchInputHandle = (pCloseTouchInputHandle)GetProcAddress(GetModuleHandle(_T("user32")),"CloseTouchInputHandle");
-		}
+        }
 
-		if (!fghGetTouchInputInfo) { 
-			free( (void*)ti );
-			break;
-		}
+        if (!fghGetTouchInputInfo) {
+            free( (void*)ti );
+            break;
+        }
 
-		if (fghGetTouchInputInfo( (HTOUCHINPUT)lParam, numInputs, ti, sizeof(TOUCHINPUT) )) {
-			/* Handle each contact point */
-			for (i = 0; i < numInputs; ++i ) {
+        if (fghGetTouchInputInfo( (HTOUCHINPUT)lParam, numInputs, ti, sizeof(TOUCHINPUT) )) {
+            /* Handle each contact point */
+            for (i = 0; i < numInputs; ++i ) {
 
-				POINT tp;
-				tp.x = TOUCH_COORD_TO_PIXEL(ti[i].x);
-				tp.y = TOUCH_COORD_TO_PIXEL(ti[i].y);
-				ScreenToClient( hWnd, &tp );
+                POINT tp;
+                tp.x = TOUCH_COORD_TO_PIXEL(ti[i].x);
+                tp.y = TOUCH_COORD_TO_PIXEL(ti[i].y);
+                ScreenToClient( hWnd, &tp );
 
-				ti[i].dwID = ti[i].dwID * 2;
+                ti[i].dwID = ti[i].dwID * 2;
 
-				if (ti[i].dwFlags & TOUCHEVENTF_DOWN) {
-					INVOKE_WCB( *window, MultiEntry,  ( ti[i].dwID, GLUT_ENTERED ) );
-					INVOKE_WCB( *window, MultiButton, ( ti[i].dwID, tp.x, tp.y, 0, GLUT_DOWN ) );
-				} else if (ti[i].dwFlags & TOUCHEVENTF_MOVE) {
-					INVOKE_WCB( *window, MultiMotion, ( ti[i].dwID, tp.x, tp.y ) );
-				} else if (ti[i].dwFlags & TOUCHEVENTF_UP)   { 
-					INVOKE_WCB( *window, MultiButton, ( ti[i].dwID, tp.x, tp.y, 0, GLUT_UP ) );
-					INVOKE_WCB( *window, MultiEntry,  ( ti[i].dwID, GLUT_LEFT ) );
-				}
-			}
-		}
-		fghCloseTouchInputHandle((HTOUCHINPUT)lParam);
-		free( (void*)ti );
-		lRet = 0; /*DefWindowProc( hWnd, uMsg, wParam, lParam );*/
-		break;
-	}
+                if (ti[i].dwFlags & TOUCHEVENTF_DOWN) {
+                    INVOKE_WCB( *window, MultiEntry,  ( ti[i].dwID, GLUT_ENTERED ) );
+                    INVOKE_WCB( *window, MultiButton, ( ti[i].dwID, tp.x, tp.y, 0, GLUT_DOWN ) );
+                } else if (ti[i].dwFlags & TOUCHEVENTF_MOVE) {
+                    INVOKE_WCB( *window, MultiMotion, ( ti[i].dwID, tp.x, tp.y ) );
+                } else if (ti[i].dwFlags & TOUCHEVENTF_UP)   {
+                    INVOKE_WCB( *window, MultiButton, ( ti[i].dwID, tp.x, tp.y, 0, GLUT_UP ) );
+                    INVOKE_WCB( *window, MultiEntry,  ( ti[i].dwID, GLUT_LEFT ) );
+                }
+            }
+        }
+        fghCloseTouchInputHandle((HTOUCHINPUT)lParam);
+        free( (void*)ti );
+        lRet = 0; /*DefWindowProc( hWnd, uMsg, wParam, lParam );*/
+        break;
+    }
+#endif
+
+#ifdef WM_INPUT
+    case WM_INPUT:
+        /* Added by Jinrong Xie <stonexjr at gmail.com> for SpaceNavigator support on Windows. Dec 2014 */
+        if (fgHasSpaceball())
+        {
+            fgSpaceballHandleWinEvent(hWnd, wParam, lParam);
+        }
+        break;
 #endif
     default:
         /* Handle unhandled messages */
@@ -1695,7 +1704,7 @@ void fgPlatformPosResZordWork(SFG_Window* window, unsigned int workMask)
                 window->State.DesiredWidth  = window->State.pWState.OldRect.right  - window->State.pWState.OldRect.left;
                 window->State.DesiredHeight = window->State.pWState.OldRect.bottom - window->State.pWState.OldRect.top;
             }
-                
+
             /* We'll finish off the fullscreen operation below after the other GLUT_POSITION_WORK|GLUT_SIZE_WORK|GLUT_ZORDER_WORK */
         }
         else
@@ -1706,7 +1715,8 @@ void fgPlatformPosResZordWork(SFG_Window* window, unsigned int workMask)
             RECT rect;
             HMONITOR hMonitor;
             MONITORINFO mi;
-        
+            DWORD newStyle;
+
             /* save current window rect, style, exstyle and maximized state */
             window->State.pWState.OldMaximized = !!IsZoomed(window->Window.Handle);
             if (window->State.pWState.OldMaximized)
@@ -1721,15 +1731,21 @@ void fgPlatformPosResZordWork(SFG_Window* window, unsigned int workMask)
             window->State.pWState.OldStyleEx = GetWindowLong(window->Window.Handle, GWL_EXSTYLE);
 
             /* remove decorations from style */
-            SetWindowLong(window->Window.Handle, GWL_STYLE,
-                            window->State.pWState.OldStyle & ~(WS_CAPTION | WS_THICKFRAME));
+            newStyle = window->State.pWState.OldStyle & ~(WS_CAPTION | WS_THICKFRAME);
+            if (fgState.DisplayMode & GLUT_STEREO)
+            {
+                /* stereo mode does not engage on nVidia stereo buffers. This kills child
+                   windows, but we make the guess that those are rare for stereo windows. */
+                newStyle |= WS_POPUP;
+            }
+            SetWindowLong(window->Window.Handle, GWL_STYLE, newStyle);
             SetWindowLong(window->Window.Handle, GWL_EXSTYLE,
                             window->State.pWState.OldStyleEx & ~(WS_EX_DLGMODALFRAME |
                             WS_EX_WINDOWEDGE | WS_EX_CLIENTEDGE | WS_EX_STATICEDGE));
 
             /* For fullscreen mode, find the monitor that is covered the most
                 * by the window and get its rect as the resize target.
-	            */
+                */
             hMonitor= MonitorFromWindow(window->Window.Handle, MONITOR_DEFAULTTONEAREST);
             mi.cbSize = sizeof(mi);
             GetMonitorInfo(hMonitor, &mi);
@@ -1748,7 +1764,7 @@ void fgPlatformPosResZordWork(SFG_Window* window, unsigned int workMask)
 
     /* Now deal with normal position, reshape and z order requests (some might have been set when handling GLUT_FULLSCREEN_WORK above */
     {
-        /* get rect describing window's current position and size, 
+        /* get rect describing window's current position and size,
             * in screen coordinates and in FreeGLUT format
             * (size (right-left, bottom-top) is client area size, top and left
             * are outside of window including decorations).

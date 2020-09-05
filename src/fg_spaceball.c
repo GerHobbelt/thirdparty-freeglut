@@ -7,8 +7,11 @@
  * magellan X-based protocol.
  */
 
+
 #include <GL/freeglut.h>
 #include "fg_internal.h"
+
+#if( !_WIN32 || _WIN32_WINNT >= 0x0501)
 
 /* -- PRIVATE FUNCTIONS --------------------------------------------------- */
 
@@ -19,11 +22,11 @@ extern int fgPlatformSpaceballNumButtons(void);
 extern void fgPlatformSpaceballSetWindow(SFG_Window *window);
 
 
-int sball_initialized = 0;
+int fg_sball_initialized = 0;
 
 void fgInitialiseSpaceball(void)
 {
-    if(sball_initialized != 0) {
+    if(fg_sball_initialized != 0) {
         return;
     }
 
@@ -34,13 +37,14 @@ void fgInitialiseSpaceball(void)
 
 void fgSpaceballClose(void)
 {
-	fgPlatformSpaceballClose();}
+    fgPlatformSpaceballClose();
+}
 
 int fgHasSpaceball(void)
 {
-    if(sball_initialized == 0) {
+    if(fg_sball_initialized == 0) {
         fgInitialiseSpaceball();
-        if(sball_initialized != 1) {
+        if(fg_sball_initialized != 1) {
             fgWarning("fgInitialiseSpaceball failed\n");
             return 0;
         }
@@ -51,9 +55,9 @@ int fgHasSpaceball(void)
 
 int fgSpaceballNumButtons(void)
 {
-    if(sball_initialized == 0) {
+    if(fg_sball_initialized == 0) {
         fgInitialiseSpaceball();
-        if(sball_initialized != 1) {
+        if(fg_sball_initialized != 1) {
             fgWarning("fgInitialiseSpaceball failed\n");
             return 0;
         }
@@ -64,9 +68,9 @@ int fgSpaceballNumButtons(void)
 
 void fgSpaceballSetWindow(SFG_Window *window)
 {
-    if(sball_initialized == 0) {
+    if(fg_sball_initialized == 0) {
         fgInitialiseSpaceball();
-        if(sball_initialized != 1) {
+        if(fg_sball_initialized != 1) {
             return;
         }
     }
@@ -74,3 +78,28 @@ void fgSpaceballSetWindow(SFG_Window *window)
     fgPlatformSpaceballSetWindow(window);
 }
 
+#else
+
+void fgInitialiseSpaceball(void)
+{
+}
+
+void fgSpaceballClose(void)
+{
+}
+
+int fgHasSpaceball(void)
+{
+    return 0;
+}
+
+int fgSpaceballNumButtons(void)
+{
+    return 0;
+}
+
+void fgSpaceballSetWindow(SFG_Window *window)
+{
+}
+
+#endif

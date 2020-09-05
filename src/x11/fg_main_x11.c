@@ -32,6 +32,7 @@
 #include <limits.h>
 #include <stdarg.h>
 
+
 /*
  * Try to get the maximum value allowed for ints, falling back to the minimum
  * guaranteed by ISO C99 if there is no suitable header.
@@ -1098,11 +1099,8 @@ void fgPlatformProcessSingleEvent ( void )
         case ButtonRelease:
         case ButtonPress:
         {
-            GLboolean pressed = GL_TRUE;
-            int button;
-
-            if( event.type == ButtonRelease )
-                pressed = GL_FALSE ;
+            GLboolean pressed;
+            int button, x, y;
 
             /*
              * A mouse button has been pressed or released. Traditionally,
@@ -1120,59 +1118,46 @@ void fgPlatformProcessSingleEvent ( void )
              */
             button = event.xbutton.button - 1;
 
+            pressed = event.type == ButtonPress ? GL_TRUE : GL_FALSE;
+            x = event.xbutton.x;
+            y = event.xbutton.y;
+
             /*
              * Do not execute the application's mouse callback if a menu
              * is hooked to this button.  In that case an appropriate
              * private call should be generated.
              */
-            if( fgCheckActiveMenu( window, button, pressed,
-                                   event.xbutton.x, event.xbutton.y ) )
+            if(fgCheckActiveMenu( window, button, pressed, x, y))
                 break;
 
             /*
              * Check if there is a mouse or mouse wheel callback hooked to the
              * window
              */
-            if( ! FETCH_WCB( *window, Mouse ) &&
-                ! FETCH_WCB( *window, MouseWheel ) )
+            if(!FETCH_WCB(*window, Mouse) && !FETCH_WCB(*window, MouseWheel))
                 break;
 
-            fgState.Modifiers = fgPlatformGetModifiers( event.xbutton.state );
+            fgState.Modifiers = fgPlatformGetModifiers(event.xbutton.state);
 
-            /* Finally execute the mouse or mouse wheel callback */
-            if( ( button < glutDeviceGet ( GLUT_NUM_MOUSE_BUTTONS ) ) || ( ! FETCH_WCB( *window, MouseWheel ) ) )
-                INVOKE_WCB( *window, Mouse, ( button,
-                                              pressed ? GLUT_DOWN : GLUT_UP,
-                                              event.xbutton.x,
-                                              event.xbutton.y )
-                );
-            else
-            {
-                /*
-                 * Map 4 and 5 to wheel zero; EVEN to +1, ODD to -1
-                 *  "  6 and 7 "    "   one; ...
-                 *
-                 * XXX This *should* be behind some variables/macros,
-                 * XXX since the order and numbering isn't certain
-                 * XXX See XFree86 configuration docs (even back in the
-                 * XXX 3.x days, and especially with 4.x).
-                 *
-                 * XXX Note that {button} has already been decremented
-                 * XXX in mapping from X button numbering to GLUT.
-				 *
-				 * XXX Should add support for partial wheel turns as Windows does -- 5/27/11
-                 */
-                int wheel_number = (button - glutDeviceGet ( GLUT_NUM_MOUSE_BUTTONS )) / 2;
-                int direction = -1;
-                if( button % 2 )
-                    direction = 1;
-
-                if( pressed )
-                    INVOKE_WCB( *window, MouseWheel, ( wheel_number,
-                                                       direction,
-                                                       event.xbutton.x,
-                                                       event.xbutton.y )
-                    );
+            /* Finally execute the mouse or mouse wheel callback.
+             * The mouse wheel is reported as buttons 4 (down) and 5 (up) by
+             * the X server. "button" has been converted to 0-based above, so
+             * that's 3 and 4 for us.
+             * If a wheel callback hasn't been registered, we simply treat them
+             * as button presses and pass them to the mouse handler. This is
+             * important for compatibility with the original GLUT.
+             */
+            if(button < 3 || button > 4 || !FETCH_WCB(*window, MouseWheel)) {
+                INVOKE_WCB(*window, Mouse, (button, pressed ? GLUT_DOWN : GLUT_UP, x, y));
+            } else {
+                if(pressed) {
+                    int dir = button & 1 ? 1 : -1;
+                    /* there's no way to know if X buttons after 5 are more
+                     * wheels/wheel axes, or regular buttons. So we'll only
+                     * ever invoke the wheel CB for wheel 0.
+                     */
+                    INVOKE_WCB(*window, MouseWheel, (0, dir, x, y));
+                }
             }
             fgState.Modifiers = INVALID_MODIFIERS;
         }
@@ -1181,10 +1166,10 @@ void fgPlatformProcessSingleEvent ( void )
         case KeyRelease:
         case KeyPress:
         {
-            FGCBKeyboardExt keyboard_ext_cb;
-            FGCBKeyboard keyboard_cb, keyboard_low_cb;
-            FGCBSpecial special_cb;
-            int did_keyboard_cb = 0;
+            FGCBKeyboardUC keyboard_cb;
+            FGCBSpecialUC special_cb;
+            FGCBUserData keyboard_ud;
+            FGCBUserData special_ud;
 
             GETWINDOW( xkey );
             GETMOUSE( xkey );
@@ -1225,154 +1210,113 @@ void fgPlatformProcessSingleEvent ( void )
 
             if( event.type == KeyPress )
             {
-                keyboard_ext_cb = (FGCBKeyboardExt)( FETCH_WCB( *window, KeyboardExt ));
-                keyboard_low_cb = (FGCBKeyboard)( FETCH_WCB( *window, KeyboardDown ));
-                keyboard_cb = (FGCBKeyboard)( FETCH_WCB( *window, Keyboard ));
-                special_cb  = (FGCBSpecial) ( FETCH_WCB( *window, Special  ));
+                keyboard_cb = (FGCBKeyboardUC)( FETCH_WCB( *window, Keyboard ));
+                special_cb  = (FGCBSpecialUC) ( FETCH_WCB( *window, Special  ));
+                keyboard_ud = FETCH_USER_DATA_WCB( *window, Keyboard );
+                special_ud  = FETCH_USER_DATA_WCB( *window, Special  );
             }
             else
             {
-                keyboard_ext_cb = NULL;
-                keyboard_low_cb = (FGCBKeyboard)( FETCH_WCB( *window, KeyboardUp ));
-                keyboard_cb = NULL;
-                special_cb  = (FGCBSpecial) ( FETCH_WCB( *window, SpecialUp  ));
+                keyboard_cb = (FGCBKeyboardUC)( FETCH_WCB( *window, KeyboardUp ));
+                special_cb  = (FGCBSpecialUC) ( FETCH_WCB( *window, SpecialUp  ));
+                keyboard_ud = FETCH_USER_DATA_WCB( *window, KeyboardUp );
+                special_ud  = FETCH_USER_DATA_WCB( *window, SpecialUp  );
             }
 
-            /* Is there a character keyboard callback hooked for this window? */
-            if (keyboard_ext_cb || keyboard_cb)
+            /* Is there a keyboard/special callback hooked for this window? */
+            if( keyboard_cb || special_cb )
             {
-                static XComposeStatus composeStatus = { 0 }; /* keep state across invocations */
-                XIC ic = window->Window.pContext.IC;
-                Status status;
-                char buf[32], *utf8 = buf;
+                XComposeStatus composeStatus;
+                char asciiCode[ 32 ];
                 KeySym keySym;
-                int i, c, len;
+                int len;
 
-                /* Check for the Unicode text associated with the event: */
-                if (ic)
+                /* Check for the ASCII/KeySym codes associated with the event: */
+                len = XLookupString( &event.xkey, asciiCode, sizeof(asciiCode),
+                                     &keySym, &composeStatus
+                );
+
+                /* GLUT API tells us to have two separate callbacks... */
+                if( len > 0 )
                 {
-                    len = Xutf8LookupString(ic, &event.xkey, buf, sizeof buf, &keySym, &status);
-                    if (status == XBufferOverflow)
+                    /* ...one for the ASCII translateable keypresses... */
+                    if( keyboard_cb )
                     {
-                        utf8 = malloc(len);
-                        len = Xutf8LookupString(ic, &event.xkey, utf8, len, &keySym, &status);
+                        fgSetWindow( window );
+                        fgState.Modifiers = fgPlatformGetModifiers( event.xkey.state );
+                        keyboard_cb( asciiCode[ 0 ],
+                                     event.xkey.x, event.xkey.y,
+                                     keyboard_ud
+                        );
+                        fgState.Modifiers = INVALID_MODIFIERS;
                     }
                 }
                 else
                 {
-                    len = XLookupString(&event.xkey, buf, sizeof buf, &keySym, &composeStatus);
-                }
+                    int special = -1;
 
-                if (len > 0)
-                {
-                    fgSetWindow(window);
-                    fgState.Modifiers = fgPlatformGetModifiers(event.xkey.state);
-
-                    i = 0;
-                    while (i < len)
+                    /*
+                     * ...and one for all the others, which need to be
+                     * translated to GLUT_KEY_Xs...
+                     */
+                    switch( keySym )
                     {
-                        i += chartorune(&c, utf8 + i);
+                    case XK_F1:     special = GLUT_KEY_F1;     break;
+                    case XK_F2:     special = GLUT_KEY_F2;     break;
+                    case XK_F3:     special = GLUT_KEY_F3;     break;
+                    case XK_F4:     special = GLUT_KEY_F4;     break;
+                    case XK_F5:     special = GLUT_KEY_F5;     break;
+                    case XK_F6:     special = GLUT_KEY_F6;     break;
+                    case XK_F7:     special = GLUT_KEY_F7;     break;
+                    case XK_F8:     special = GLUT_KEY_F8;     break;
+                    case XK_F9:     special = GLUT_KEY_F9;     break;
+                    case XK_F10:    special = GLUT_KEY_F10;    break;
+                    case XK_F11:    special = GLUT_KEY_F11;    break;
+                    case XK_F12:    special = GLUT_KEY_F12;    break;
 
-                        /* ...for the Unicode translateable keypresses... */
-                        if (keyboard_ext_cb)
-                            keyboard_ext_cb(c, event.xkey.x, event.xkey.y);
+                    case XK_KP_Left:
+                    case XK_Left:   special = GLUT_KEY_LEFT;   break;
+                    case XK_KP_Right:
+                    case XK_Right:  special = GLUT_KEY_RIGHT;  break;
+                    case XK_KP_Up:
+                    case XK_Up:     special = GLUT_KEY_UP;     break;
+                    case XK_KP_Down:
+                    case XK_Down:   special = GLUT_KEY_DOWN;   break;
 
-                        /* ...for the Latin-1 translateable keypresses... */
-                        if (keyboard_cb)
-                            if (c < 256)
-                                keyboard_cb(c, event.xkey.x, event.xkey.y);
+                    case XK_KP_Prior:
+                    case XK_Prior:  special = GLUT_KEY_PAGE_UP; break;
+                    case XK_KP_Next:
+                    case XK_Next:   special = GLUT_KEY_PAGE_DOWN; break;
+                    case XK_KP_Home:
+                    case XK_Home:   special = GLUT_KEY_HOME;   break;
+                    case XK_KP_End:
+                    case XK_End:    special = GLUT_KEY_END;    break;
+                    case XK_KP_Insert:
+                    case XK_Insert: special = GLUT_KEY_INSERT; break;
+
+                    case XK_Num_Lock :  special = GLUT_KEY_NUM_LOCK;  break;
+                    case XK_KP_Begin :  special = GLUT_KEY_BEGIN;     break;
+                    case XK_KP_Delete:  special = GLUT_KEY_DELETE;    break;
+
+                    case XK_Shift_L:   special = GLUT_KEY_SHIFT_L;    break;
+                    case XK_Shift_R:   special = GLUT_KEY_SHIFT_R;    break;
+                    case XK_Control_L: special = GLUT_KEY_CTRL_L;     break;
+                    case XK_Control_R: special = GLUT_KEY_CTRL_R;     break;
+                    case XK_Alt_L:     special = GLUT_KEY_ALT_L;      break;
+                    case XK_Alt_R:     special = GLUT_KEY_ALT_R;      break;
                     }
 
-                    fgState.Modifiers = INVALID_MODIFIERS;
-
-                    did_keyboard_cb = 1;
-                }
-
-                if (utf8 != buf)
-                    free(utf8);
-            }
-
-            /* Is there a low-level keyboard callback hooked for this window? */
-            if (keyboard_low_cb || special_cb)
-            {
-                int special = -1;
-                int ascii = 0;
-
-                KeySym keySym = XLookupKeysym(&event.xkey, 0);
-
-                /* ...for low-level keys, which need to be
-                 * translated to GLUT_KEY_Xs or ASCII values...
-                 */
-                switch( keySym )
-                {
-                case XK_F1:     special = GLUT_KEY_F1;     break;
-                case XK_F2:     special = GLUT_KEY_F2;     break;
-                case XK_F3:     special = GLUT_KEY_F3;     break;
-                case XK_F4:     special = GLUT_KEY_F4;     break;
-                case XK_F5:     special = GLUT_KEY_F5;     break;
-                case XK_F6:     special = GLUT_KEY_F6;     break;
-                case XK_F7:     special = GLUT_KEY_F7;     break;
-                case XK_F8:     special = GLUT_KEY_F8;     break;
-                case XK_F9:     special = GLUT_KEY_F9;     break;
-                case XK_F10:    special = GLUT_KEY_F10;    break;
-                case XK_F11:    special = GLUT_KEY_F11;    break;
-                case XK_F12:    special = GLUT_KEY_F12;    break;
-
-                case XK_KP_Left:
-                case XK_Left:   special = GLUT_KEY_LEFT;   break;
-                case XK_KP_Right:
-                case XK_Right:  special = GLUT_KEY_RIGHT;  break;
-                case XK_KP_Up:
-                case XK_Up:     special = GLUT_KEY_UP;     break;
-                case XK_KP_Down:
-                case XK_Down:   special = GLUT_KEY_DOWN;   break;
-
-                case XK_KP_Prior:
-                case XK_Prior:  special = GLUT_KEY_PAGE_UP; break;
-                case XK_KP_Next:
-                case XK_Next:   special = GLUT_KEY_PAGE_DOWN; break;
-                case XK_KP_Home:
-                case XK_Home:   special = GLUT_KEY_HOME;   break;
-                case XK_KP_End:
-                case XK_End:    special = GLUT_KEY_END;    break;
-                case XK_KP_Insert:
-                case XK_Insert: special = GLUT_KEY_INSERT; break;
-
-                case XK_Num_Lock :  special = GLUT_KEY_NUM_LOCK;  break;
-                case XK_KP_Begin :  special = GLUT_KEY_BEGIN;     break;
-                case XK_KP_Delete:  special = GLUT_KEY_DELETE;    break;
-
-                case XK_Shift_L:   special = GLUT_KEY_SHIFT_L;    break;
-                case XK_Shift_R:   special = GLUT_KEY_SHIFT_R;    break;
-                case XK_Control_L: special = GLUT_KEY_CTRL_L;     break;
-                case XK_Control_R: special = GLUT_KEY_CTRL_R;     break;
-                case XK_Alt_L:     special = GLUT_KEY_ALT_L;      break;
-                case XK_Alt_R:     special = GLUT_KEY_ALT_R;      break;
-                default:
-                    if( keySym >= XK_space && keySym <= XK_ydiaeresis )
-                        ascii = keySym;
-                    break;
-                }
-
-                /*
-                 * Execute the callback (if one has been specified),
-                 * given that the special code seems to be valid...
-                 * But only if we haven't already sent translated text for it,
-                 * such as numeric keypad keys with numlock on.
-                 */
-                if( special_cb && (special != -1) && !did_keyboard_cb )
-                {
-                    fgSetWindow( window );
-                    fgState.Modifiers = fgPlatformGetModifiers( event.xkey.state );
-                    special_cb( special, event.xkey.x, event.xkey.y );
-                    fgState.Modifiers = INVALID_MODIFIERS;
-                }
-                else if( keyboard_low_cb && (ascii >= 32 && ascii < 256) )
-                {
-                    fgSetWindow( window );
-                    fgState.Modifiers = fgPlatformGetModifiers( event.xkey.state );
-                    keyboard_low_cb( ascii, event.xkey.x, event.xkey.y );
-                    fgState.Modifiers = INVALID_MODIFIERS;
+                    /*
+                     * Execute the callback (if one has been specified),
+                     * given that the special code seems to be valid...
+                     */
+                    if( special_cb && (special != -1) )
+                    {
+                        fgSetWindow( window );
+                        fgState.Modifiers = fgPlatformGetModifiers( event.xkey.state );
+                        special_cb( special, event.xkey.x, event.xkey.y, special_ud );
+                        fgState.Modifiers = INVALID_MODIFIERS;
+                    }
                 }
             }
         }

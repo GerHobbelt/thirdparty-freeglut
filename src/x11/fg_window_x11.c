@@ -183,6 +183,8 @@ void fgPlatformOpenWindow( SFG_Window* window, const char* title,
             fgState.DisplayMode |= GLUT_DOUBLE ;
             fghChooseConfig(&WINDOW_CONFIG);
             fgState.DisplayMode &= ~GLUT_DOUBLE;
+
+            if( WINDOW_CONFIG ) goto done_retry;
         }
 #endif
 
@@ -191,8 +193,20 @@ void fgPlatformOpenWindow( SFG_Window* window, const char* title,
             fgState.DisplayMode &= ~GLUT_MULTISAMPLE ;
             fghChooseConfig(&WINDOW_CONFIG);
             fgState.DisplayMode |= GLUT_MULTISAMPLE;
+
+            if( WINDOW_CONFIG ) goto done_retry;
+        }
+
+        if( fgState.DisplayMode & GLUT_SRGB )
+        {
+            fgState.DisplayMode &= ~GLUT_SRGB ;
+            fghChooseConfig(&WINDOW_CONFIG);
+            fgState.DisplayMode |= GLUT_SRGB;
+
+            if( WINDOW_CONFIG ) goto done_retry;
         }
     }
+done_retry:
 
     FREEGLUT_INTERNAL_ERROR_EXIT( WINDOW_CONFIG != NULL,
                                   "FBConfig with necessary capabilities not found", "fgOpenWindow" );
@@ -224,6 +238,11 @@ void fgPlatformOpenWindow( SFG_Window* window, const char* title,
      * XXX    more pleasant to trace.  (Think mouse-motion!  Tons of
      * XXX    ``bonus'' GUI events stream in.)
      */
+    winAttr.event_mask        =
+        StructureNotifyMask | SubstructureNotifyMask | ExposureMask |
+        ButtonPressMask | ButtonReleaseMask | KeyPressMask | KeyReleaseMask |
+        VisibilityChangeMask | EnterWindowMask | LeaveWindowMask |
+        PointerMotionMask | ButtonMotionMask;
     winAttr.background_pixmap = None;
     winAttr.background_pixel  = 0;
     winAttr.border_pixel      = 0;
@@ -233,7 +252,7 @@ void fgPlatformOpenWindow( SFG_Window* window, const char* title,
         visualInfo->visual, AllocNone
     );
 
-    mask = CWBackPixmap | CWBorderPixel | CWColormap;
+    mask = CWBackPixmap | CWBorderPixel | CWColormap | CWEventMask;
 
     if( window->IsMenu || ( gameMode == GL_TRUE ) )
     {

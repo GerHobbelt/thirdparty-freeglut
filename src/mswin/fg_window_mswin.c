@@ -143,7 +143,7 @@ void fgNewWGLCreateContext( SFG_Window* window )
     PFNWGLCREATECONTEXTATTRIBSARBPROC wglCreateContextAttribsARB;
 
     /* If nothing fancy has been required, leave the context as it is */
-    if ( fghIsLegacyContextRequested() )
+    if ( fghIsLegacyContextRequested(window) )
     {
         return;
     }
@@ -495,9 +495,9 @@ typedef struct
 } m_proc_t;
 
 static BOOL CALLBACK m_proc(HMONITOR mon,
-			    HDC hdc,
-			    LPRECT rect,
-			    LPARAM data)
+                HDC hdc,
+                LPRECT rect,
+                LPARAM data)
 {
       m_proc_t *dp=(m_proc_t *)data;
       MONITORINFOEX info;

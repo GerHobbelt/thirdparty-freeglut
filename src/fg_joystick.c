@@ -324,7 +324,7 @@ static void fghJoystickRawRead( SFG_Joystick* joy, int* buttons, float* axes )
     if( joy->error )
         return;
 
-	fgPlatformJoystickRawRead ( joy, buttons, axes );
+    fgPlatformJoystickRawRead ( joy, buttons, axes );
 }
 
 /*
@@ -582,7 +582,7 @@ void fgPlatformJoystickRawRead( SFG_Joystick* joy, int* buttons, float* axes )
 
 void fgPlatformJoystickOpen( SFG_Joystick* joy )
 {
-	int i = 0;
+    int i = 0;
     OSStatus err;
 
     /* XXX FIXME: get joystick name in Mac */
@@ -857,7 +857,7 @@ static void fghJoystickOpen( SFG_Joystick* joy )
     joy->num_axes = joy->num_buttons = 0;
     joy->name[ 0 ] = '\0';
 
-	fgPlatformJoystickOpen ( joy );
+    fgPlatformJoystickOpen ( joy );
 
 }
 
@@ -879,7 +879,7 @@ static void fghJoystickInit( int ident )
     fgJoystick[ ident ]->num_axes = fgJoystick[ ident ]->num_buttons = 0;
     fgJoystick[ ident ]->error = GL_TRUE;
 
-	fgPlatformJoystickInit( fgJoystick, ident );
+    fgPlatformJoystickInit( fgJoystick, ident );
 
     fghJoystickOpen( fgJoystick[ ident  ] );
 }
@@ -907,7 +907,7 @@ void fgJoystickClose( void )
     {
         if( fgJoystick[ ident ] )
         {
-			fgPlatformJoystickClose ( ident );
+            fgPlatformJoystickClose ( ident );
 
             free( fgJoystick[ ident ] );
             fgJoystick[ ident ] = NULL;

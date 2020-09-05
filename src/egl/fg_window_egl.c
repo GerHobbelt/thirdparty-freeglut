@@ -27,6 +27,7 @@
 #include "fg_internal.h"
 
 int fghChooseConfig(EGLConfig* config) {
+  EGLint num_config;
   EGLint attributes[32];
   int where = 0;
   ATTRIB_VAL(EGL_SURFACE_TYPE, EGL_WINDOW_BIT);
