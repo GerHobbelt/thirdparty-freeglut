@@ -246,7 +246,7 @@ contained herein.
 		<ol>
 			<li><a href="#ImplementationNotes">Implementation Notes</a></li>
 			<li><a href="#GLUT_State">GLUT State</a></li>
-			<li><a href="#Freeglut.h_Header">"freeglut.h" Header File</a></li>
+			<li><a href="#freeglut.h_Header">"freeglut.h" Header File</a></li>
 			<li><a href="#References">References</a></li>
 			<li><a href="#Index">Index</a></li>
 		</ol>
@@ -293,7 +293,7 @@ specifies the application program interface to the <i>freeglut</i> library.
 In developing the <i>freeglut</i> library, we have taken careful steps
 to ensure consistency in function operation across the board, in such a
 manner as to maintain compatibility with GLUT's behavior whenever
-possible. In this section some of the important conventions of FreeGLUT,
+possible. In this section some of the important conventions of freeglut,
 and their compatibility with GLUT, are made explicit.
 </p>
 
@@ -301,7 +301,7 @@ and their compatibility with GLUT, are made explicit.
 
 <p>
 There is considerable confusion about the "right thing to do" concerning
-window  size and position.  GLUT itself is not consistent between
+window size and position. GLUT itself is not consistent between
 Windows and UNIX/X11; since platform independence is a virtue for
 <i>freeglut</i>, we decided to break with GLUT's behaviour. <br>
 Under UNIX/X11, it is apparently not possible to get the window border
@@ -313,15 +313,53 @@ upper left hand corner of the outside of the window (the non-client
 area) is at (x,y) and the size of the drawable (client) area is (w,h).
 The coordinates taken by <tt>glutInitPosition</tt> and
 <tt>glutPositionWindow</tt>, as well as the coordinates provided by
-<i>FreeGLUT</i> when it calls the <tt>glutPositionFunc</tt> callback,
-specify the top-left of the non-client area of the window.</li>
+<i>freeglut</i> when it calls the <tt>glutPositionFunc</tt> callback,
+specify the top-left of the non-client area of the window. By default
+only positive-signed coordinates are supported. If GLUT_ALLOW_NEGATIVE_WINDOW_POSITION
+is enabled, then negative coordinates are supported. An exception
+for <tt>glutPositionWindow</tt> exists as it's always supported negative
+window coordinates.</li>
 <li>When you query the size and position of the window using
-<tt>glutGet</tt>, <i>FreeGLUT</i> will return the size of the drawable
+<tt>glutGet</tt>, <i>freeglut</i> will return the size of the drawable
 area--the (w,h) that you specified when you created the window--and the
 coordinates of the upper left hand corner of the drawable (client)
 area--which is <u>NOT</u> the (x,y) position of the window you specified
 when you created it.</ul>
 </p>
+
+<h3>3.2.2 User-data callbacks</h3>
+
+<p>
+GLUT was created as a tool to help teach OpenGL programming. To simplify
+development, callbacks were used for handling display, input, and other
+events. But at the time it was developed, the purpose, or for some other 
+unknown reason, the callbacks lacked any user-provided data argument.
+This has caused considerable difficulties for any significantly advanced
+usage of GLUT, and now <i>freeglut</i>. This has prevented any attempt to 
+wrap <i>freeglut</i> in a C++ wrapper, make per-window, per-callback data
+structure, and potentially made it undesirable to modern C developers who
+tend to be well versed in "don't use globals". To combat these
+complaints and <i>issues</i>, many callbacks (with some deprecated 
+callbacks excluded) support user-data callbacks provided through additional
+functions provided in <i>freeglut</i>. All callbacks that support user-data
+callbacks are marked as such.
+</p>
+
+<p>
+The general rule to follow is to take the <i>freeglut</i> callback function 
+and append "Ucall" to the end of the function, add an additional <tt>void*</tt>
+argument to the end of the argument list of both the <i>freeglut</i> function
+and the callback function. This will pass the user-data to the callback when it's
+invoked.
+</p>
+
+<p><b>Examples</b></p>
+
+<p><tt>void glutPositionFunc ( void (* func)( int x, int y ) );</tt><br>
+<tt>void glutPositionFuncUcall ( void (* func)( int x, int y, void* user_data ), void* user_data );</tt></p>
+
+<p><tt>void glutKeyboardUpFunc ( void (* func)( unsigned char key, int x, int y ) );</tt><br>
+<tt>void glutKeyboardUpFuncUcall ( void (* func)( unsigned char key, int x, int y, void* user_data ), void* user_data );</tt></p>
 
 <h2>3.3 Terminology</h2>
 
@@ -440,7 +478,7 @@ functions specify a desired position and size for windows that
 <i>freeglut</i> will create in the future.
 The position is measured in pixels from the upper left hand corner of the
 screen, with "x" increasing to the right and "y" increasing towards the bottom
-of the screen.  The size is measured in pixels.  <i>Freeglut</i>
+of the screen.  The size is measured in pixels. <i>freeglut</i>
 does not promise to follow these specifications in creating its windows,
 but it certainly makes an attempt to.
 </p>
@@ -455,9 +493,16 @@ left-hand corner of the window's decorations. Also for both operating
 systems, the size of the window is the size of the usable interior.<br>
 With <tt>glutGet</tt> information can be acquired about the current
 window's size, position and decorations. Note however that according to
-<a href="#Conventions">FreeGLUT's conventions</a>, the information
+<a href="#Conventions">freeglut's conventions</a>, the information
 returned about the window coordinates does not correspond to the
-coordinates used when setting window position.
+coordinates used when setting window position. In addition, GLUT only
+accepts positive window coordinates, and ignores all negative window
+coordinates. But if GLUT_ALLOW_NEGATIVE_WINDOW_POSITION is enabled,
+then negative window coordinates can be used. This is useful for
+multi-montitor setups where the second monitor may be in the negative
+desktop space of the primary monitor, as now the window can be placed
+on the additional monitors. Furthermore, this flag also determines how 
+negative coordinates and sizes are interpreted for subwindows.
 </p>
 
 <p>
@@ -479,6 +524,11 @@ the window will immediately snap out to this width, but the application can
 call <tt>glutReshapeWindow</tt> and make a window narrower again.
 </p>
 
+<p>
+If GLUT_ALLOW_NEGATIVE_WINDOW_POSITION is enabled, <tt>glutInitWindowPosition</tt>
+will accept negative window coordinates.
+</p>
+
 <h2>4.3 glutInitDisplayMode</h2>
 
 <h2>4.4 glutInitDisplayString</h2>
@@ -486,7 +536,7 @@ call <tt>glutReshapeWindow</tt> and make a window narrower again.
 
 <p>
 glutInitDisplayString support is limited: any of the tokens recognized
-by GLUT are also recognized by <i>FreeGLUT</i>, but any statements with
+by GLUT are also recognized by <i>freeglut</i>, but any statements with
 comparators cannot (yet: do <a href="../help.php">help develop
 this!</a>) be handled. Any spec (comparator and value) after the token
 is ignored. However, many of these values can be set with glutSetOption
@@ -497,7 +547,7 @@ for now...
 <p>
 The <tt>glutInitErrorFunc</tt> and <tt>glutInitWarningFunc</tt>
 functions specify callbacks that will be called upon warnings and errors
-issued from within <i>FreeGLUT</i> so that the user can deal with these.
+issued from within <i>freeglut</i> so that the user can deal with these.
 Useful for rerouting to another output sink (e.g., logging) and also to
 avoid exit(1) being called upon error. As with other glutInit*
 functions, these can be set before glutInit is called, so any output
@@ -508,13 +558,15 @@ from the library can be handled by the user.
 <p><tt>void glutInitErrorFunc&nbsp;&nbsp;&nbsp;( void (* callback)( const char *fmt, va_list ap) );</tt><br/>
 <tt>void glutInitWarningFunc&nbsp;( void (* callback)( const char *fmt, va_list ap) );</tt> </p>
 
+<p>These functions have user-data callback functions.</p>
+
 <p><b>Description</b></p>
 <p>
 The users callback is passed a format string and a variable argument
 list that can be passed to functions such as <tt>printf</tt>.<br />
 Note that there are the preprocessor definitions
 <tt>FREEGLUT_PRINT_ERRORS</tt> and <tt>FREEGLUT_PRINT_WARNINGS</tt>,
-which affect <i>FreeGLUT</i>'s warning and error behavior when no user
+which affect <i>freeglut</i>'s warning and error behavior when no user
 callback is defined. If defined at library (not client app!) compile
 time--by default it is, warnings and errors are printed to
 <tt>stderr</tt>. If not defined, warnings and errors are muted (not
@@ -543,7 +595,7 @@ the event loop (as invoked by the <tt>glutMainLoop</tt> function) to the
 calling function.  This prevented an application from having re-entrant
 code, in which GLUT could be invoked from within a callback, and it prevented
 the application from doing any post-processing (such as freeing allocated
-memory) after GLUT had closed down.  <i>Freeglut</i> allows the application
+memory) after GLUT had closed down.  <i>freeglut</i> allows the application
 programmer to specify more direct control over the event loop by means of
 two new functions.  The first, <tt>glutMainLoopEvent</tt>, processes
 a single iteration of the event loop and allows the application to use a different
@@ -576,7 +628,7 @@ and so on.
 <p>
 In GLUT, there was absolutely no way for the application programmer to
 have control return from the <tt>glutMainLoop</tt> function to the
-calling function.  <i>Freeglut</i> allows the programmer
+calling function.  <i>freeglut</i> allows the programmer
 to force this by setting the <tt>GLUT_ACTION_ON_WINDOW_CLOSE</tt> option
 and invoking the <tt>glutLeaveMainLoop</tt> function from one of the callbacks.
 Stopping the program this way is preferable to simply calling <tt>exit</tt>
@@ -650,6 +702,44 @@ Consortium and ask for the code to be fixed.
 
 <h2>6.2 glutCreateSubwindow</h2>
 
+<p>
+The <tt>glutCreateSubwindow</tt> function creates a subwindow of an existing window.
+</p>
+
+<p><b>Usage</b></p>
+
+<p>
+<tt>int glutCreateSubwindow(int window, int x, int y, int width, int height);</tt>
+</p>
+
+<p><b>Description</b></p>
+
+<p>
+Creates a subwindow of <i>window</i> that is at location <i>x</i> and <i>y</i>
+relative to the window's upper-left corner, and is of the specified <i>width</i> and <i>height</i>. The newly created
+window ID is returned by <tt>glutCreateSubwindow</tt>. By default, the position coordinates will only allow windows within the bounds of the parent.
+Negative coordinates be treated as coordinates from the opposite edge for a given axis. In addition, the width of the window will be taken into account.
+For example, if the parent window is 100 pixels wide, and the <i>x</i> is 10, and <i>width</i> is 20, the subwindow will be located at <tt>x = 10</tt>.
+If <i>x</i> is -10, then the subwindow will be located at 70 <tt>(parent - abs(pos) - dim)</tt>. If the <i>width</i> or <i>height</i> are negative, then the dimension is taken as a
+subtraction of the parent dimension. For example, if the parent window is 100 pixels wide, and the <i>x</i> is 10, and <i>width</i> is 20, the 
+subwindow will have a size of 20. If <i>width</i> is -20, then the subwindow will have a width of 70 <tt>(parent - pos - abs(dim))</tt>.
+</p>
+
+<p>
+If GLUT_ALLOW_NEGATIVE_WINDOW_POSITION is enabled, the window behavior differs. Negative window coordinates are now accepted and may result in windows outside
+of the viewing area, depending on the platform of operation. Negative <i>width</i> and <i>height</i> are still used as a subtraction of the parent window dimension,
+but they do not take <i>x</i> or <i>y</i> into account. For example, if the parent window is 100 pixels wide, and the <i>x</i> is 10, and <i>width</i> is 20, the 
+subwindow will be located at <tt>x = 10</tt>. If <i>x</i> is -10, then the subwindow will be located at <tt>x = -10</tt>. If the parent window is 100 pixels wide, 
+and the <i>x</i> is 10, and <i>width</i> is 20, the subwindow will have a size of 20. If <i>width</i> is -20, then the subwindow will have a width of 80 <tt>(parent - abs(dim))</tt>.
+</p>
+
+<p><b>Changes From GLUT</b></p>
+
+<p>
+GLUT does not support negative <i>x</i> or <i>y</i>. Nor does it have GLUT_ALLOW_NEGATIVE_WINDOW_POSITION 
+which changes the the functionality of <tt>glutCreateSubwindow</tt>.
+</p>
+
 <h2>6.3 glutDestroyWindow</h2>
 
 <h2>6.4 glutSetWindow, glutGetWindow</h2>
@@ -674,7 +764,7 @@ an iconified state respectively.
 Normally a window system displays a title for every top-level window in
 the system. The initial title is set when you call glutCreateWindow().
 By means of the <tt>glutSetWindowTitle</tt> function you can set the
-titles for your top-level <i>FreeGLUT</i> windows. If you just want one
+titles for your top-level <i>freeglut</i> windows. If you just want one
 title for the window over the window's entire life, you should set it
 when you open the window with glutCreateWindow().<br>
 <tt>glutSetIconTitle</tt> sets the title to be displayed for the window
@@ -684,7 +774,7 @@ when it is in iconified (minimized) state.
 <p><b>Changes From GLUT</b></p>
 
 <p><tt>glutSetIconTitle</tt> does nothing in GLUT on Windows, but is
-emulated on Windows by <i>FreeGLUT</i>.</p>
+emulated on Windows by <i>freeglut</i>.</p>
 
 <h2>6.6 glutReshapeWindow</h2>
 
@@ -746,7 +836,7 @@ current window.
 <h1>9. <a name="Overlay"></a>Overlay Functions</h1>
 
 <p>
-<i>Freeglut</i> does not allow overlays, although it does "answer the mail"
+<i>freeglut</i> does not allow overlays, although it does "answer the mail"
 with function stubs so that GLUT-based programs can compile and link against
 <i>freeglut</i> without modification.
 </p>
@@ -889,6 +979,8 @@ The <tt>glutShowOverlay</tt> and <tt>glutHideOverlay</tt> functions are not impl
 
 <h2>10.1 glutCreateMenu</h2>
 
+<p>Has user-data callback function.</p>
+
 <h2>10.2 glutDestroyMenu</h2>
 
 <h2>10.3 glutGetMenu, glutSetMenu</h2>
@@ -931,24 +1023,28 @@ stroke font, or an unknown font.
 
 <h2>10.11 glutMenuDestroyFunc</h2>
 
+<p>Has user-data callback function.</p>
+
 <h1>11. <a name="GlobalCallback"></a>Global Callback Registration Functions</h1>
 
 <h2>11.1 glutTimerFunc</h2>
+
+<p>Has user-data callback function.</p>
 
 <h2>11.2 glutIdleFunc</h2>
 
 <p>
 The <tt>glutIdleFunc</tt> function sets the global idle callback. <i>
-Freeglut</i>  calls the idle callback when there are no inputs from the user.
+freeglut</i>  calls the idle callback when there are no inputs from the user.
 </p>
 
 <p><b>Usage</b></p>
 
-<p><tt>void glutIdleFunc ( void (*func)
-( void ) );</tt> </p>
+<p><tt>void glutIdleFunc ( void (*func ) ( void ) );</tt> </p>
 
-<p><tt>func</tt>The new
-global idle callback function </p>
+<p><tt>func</tt> The new global idle callback function</p>
+
+<p>Has user-data callback function.</p>
 
 <p><b>Description</b></p>
 
@@ -958,7 +1054,7 @@ specifies the function that <i>freeglut</i> will call to perform background
 processing tasks such as continuous animation when window system events are
 not being received.  If enabled, this function is called continuously
 from <i>freeglut</i> while no events are received.  The callback function
-has no parameters and returns no value.  <i>Freeglut</i> does not change
+has no parameters and returns no value.  <i>freeglut</i> does not change
 the <i>current window</i> or the <i>current menu</i> before invoking the idle
 callback; programs with multiple windows or menus must explicitly set the
 <i>current window</i> and <i>current menu</i>
@@ -988,21 +1084,29 @@ the idle callback. </p>
 
 <h2>11.3 glutMenuStatusFunc</h2>
 
+<p>Has user-data callback function.</p>
+
 <h2>11.4 glutMenuStateFunc</h2>
 
 <h1>12. <a name="WindowCallback"></a>Window-Specific Callback Registration Functions</h1>
 
 <h2>12.1 glutDisplayFunc</h2>
 
+<p>Has user-data callback function.</p>
+
 <h2>12.2 glutOverlayDisplayFunc</h2>
 
+<p>Has user-data callback function.</p>
+
 <h2>12.3 glutReshapeFunc</h2>
+
+<p>Has user-data callback function.</p>
 
 <h2>12.4 glutPositionFunc</h2>
 
 <p>
 The <tt>glutPositionFunc</tt> function sets the window's position
-callback. <i>Freeglut</i> calls the position callback when the window is
+callback. <i>freeglut</i> calls the position callback when the window is
 repositioned/moved programatically or by the user.
 </p>
 
@@ -1011,14 +1115,16 @@ repositioned/moved programatically or by the user.
 <p><tt>void glutPositionFunc ( void
 (* func)( int x, int y) );</tt></p>
 
+<p>Has user-data callback function.</p>
+
 <p><b>Description</b></p>
 
-<p>When <i>FreeGLUT</i> calls this callback, it provides the new
+<p>When <i>freeglut</i> calls this callback, it provides the new
 position on the screen of the top-left of the <u>non-client area</u>,
 that is, the same coordinates used by <tt>glutInitPosition</tt> and
 <tt>glutPositionWindow</tt>. To get the position on the screen of the
 top-left of the client area, use <tt>glutGet(GLUT_WINDOW_X)</tt> and
-<tt>glutGet(GLUT_WINDOW_Y)</tt>. See <a href="#Conventions">FreeGLUT's
+<tt>glutGet(GLUT_WINDOW_Y)</tt>. See <a href="#Conventions">freeglut's
 conventions</a> for more information.</p>
 
 <p><b>Changes From GLUT</b></p>
@@ -1029,7 +1135,7 @@ conventions</a> for more information.</p>
 
 <p>
 The <tt>glutCloseFunc</tt> function sets the window's close
-callback. <i>Freeglut</i> calls the close callback when the window is
+callback. <i>freeglut</i> calls the close callback when the window is
 about to be destroyed.
 </p>
 
@@ -1039,6 +1145,8 @@ about to be destroyed.
 
 <p><tt>func</tt> The window's new closure callback function <br/>
 </p>
+
+<p>Has user-data callback function.</p>
 
 <p><b>Description</b></p>
 
@@ -1051,10 +1159,10 @@ window header (for top-level windows only), or due to a pending closure
 of a subwindow's parent window. In the first case, the closure callback
 is not invoked from the <tt>glutDestroyWindow</tt> call, but at a
 later time point.<br />
-<i>Freeglut</i> sets the <i>current window</i> to the window
+<i>freeglut</i> sets the <i>current window</i> to the window
 which is about to be closed when the callback is invoked. The window can
 thus be retrieved in the callback using <tt>glutGetWindow</tt>.<br />
-Users looking to prevent <i>FreeGLUT</i> from exiting when a window is
+Users looking to prevent <i>freeglut</i> from exiting when a window is
 closed, should look into using glutSetOption to set
 <tt>GLUT_ACTION_ON_WINDOW_CLOSE</tt>. Some settings will prevent the
 application from exiting when a window is closed.<br />
@@ -1067,11 +1175,13 @@ alias to <tt>glutCloseFunc</tt>.
 
 <h2>12.6 glutKeyboardFunc</h2>
 
+<p>Has user-data callback function.</p>
+
 <h2>12.7 glutSpecialFunc</h2>
 
 <p>
 The <tt>glutSpecialFunc</tt> function sets the window's special key press
-callback. <i>Freeglut</i> calls the special key press callback when the
+callback. <i>freeglut</i> calls the special key press callback when the
 user presses a special key.
 </p>
 
@@ -1091,6 +1201,8 @@ to the window at the time the key is pressed <br/>
 </tt>The y-coordinate of the mouse relative
 to the window at the time the key is pressed </p>
 
+<p>Has user-data callback function.</p>
+
 <p><b>Description</b></p>
 
 <p>
@@ -1099,7 +1211,7 @@ that <i>freeglut</i> will call when the user
 presses a special key on the keyboard.  The callback function has one
 argument: the name of the function to be invoked ("called back") at
 the time at which the special key is pressed.  The function returns no
-value.  <i>Freeglut</i> sets the <i>current window</i> to the window
+value.  <i>freeglut</i> sets the <i>current window</i> to the window
 which is active when the callback is invoked.  "Special keys" are the
 function keys, the arrow keys, the Page Up and Page Down keys, and the Insert
 key.  The Delete key is considered to be a regular key. <br/>
@@ -1126,7 +1238,7 @@ The <tt>key</tt> argument may take one of the following defined constant values:
 
 <p>
 The <tt>glutKeyboardUpFunc</tt> function sets the window's key release
-callback. <i>Freeglut</i> calls the key release callback when the user releases
+callback. <i>freeglut</i> calls the key release callback when the user releases
 a key.
 </p>
 
@@ -1146,6 +1258,8 @@ to the window at the time the key is released <br/>
 </tt>The y-coordinate of the mouse relative
 to the window at the time the key is released </p>
 
+<p>Has user-data callback function.</p>
+
 <p><b>Description</b></p>
 
 <p>
@@ -1160,7 +1274,7 @@ for upper or lower case letters, it does not do so for non-alphabetical
 characters.  Nor does it account for the Caps-Lock key being on.
 The operating system may send some unexpected characters to
 <i>freeglut</i>, such as "8" when the user is pressing the Shift
-key.  <i>Freeglut</i> also invokes the callback when the user
+key.  <i>freeglut</i> also invokes the callback when the user
 releases the Control, Alt, or Shift keys, among others.  Releasing
 the Delete key causes this function to be invoked with a value of
 127 for <tt>key</tt>. <br/> Calling <tt>glutKeyboardUpFunc</tt> with
@@ -1178,7 +1292,7 @@ as possible.  Users who find differences should contact the
 
 <p>
 The <tt>glutSpecialUpFunc</tt> function sets the window's special key
-release callback. <i>Freeglut</i> calls the special key release callback
+release callback. <i>freeglut</i> calls the special key release callback
 when the user releases a special key.
 </p>
 
@@ -1198,6 +1312,8 @@ to the window at the time the key is released <br/>
 </tt>The y-coordinate of the mouse relative
 to the window at the time the key is released </p>
 
+<p>Has user-data callback function.</p>
+
 <p><b>Description</b></p>
 
 <p>
@@ -1205,7 +1321,7 @@ The <tt>glutSpecialUpFunc</tt>function specifies the function that <i>freeglut</
 user releases a special key from the keyboard.  The callback function
 has one argument: the name of the function to be invoked ("called back")
 at the time at which the special key is released.  The function returns
-no value. <i>Freeglut</i> sets the <i>current window</i> to the window
+no value. <i>freeglut</i> sets the <i>current window</i> to the window
 which is active when the callback is invoked.  "Special keys" are the
 function keys, the arrow keys, the Page Up and Page Down keys, and the Insert
 key.  The Delete key is considered to be a regular key. <br/>
@@ -1235,13 +1351,17 @@ have them fixed.
 
 <h2>12.10 glutMotionFunc, glutPassiveMotionFunc</h2>
 
+<p>Both functions have user-data callback functions.</p>
+
 <h2>12.11 glutMouseFunc</h2>
+
+<p>Has user-data callback function.</p>
 
 <h2>12.12 glutMouseWheelFunc</h2>
 
 <p>
 The <tt>glutMouseWheelFunc</tt> function sets the window's mouse wheel
-callback. <i>Freeglut</i> calls the mouse wheel callback when the user
+callback. <i>freeglut</i> calls the mouse wheel callback when the user
 spins the mouse wheel.
 </p>
 
@@ -1250,9 +1370,11 @@ spins the mouse wheel.
 <p><tt>void glutMouseWheelFunc ( void( *callback )( int wheel, int
 direction, int x, int y ));</tt></p>
 
+<p>Has user-data callback function.</p>
+
 <p><b>Description</b></p>
 
-<p>If the mouse wheel is spun over your (sub)window, <i>FreeGLUT</i>
+<p>If the mouse wheel is spun over your (sub)window, <i>freeglut</i>
 will report this via the MouseWheel callback. <tt>wheel</tt> is the wheel
 number, <tt>direction</tt> is +/- 1, and <tt>x</tt> and <tt>y</tt> are
 the mouse coordinates.<br><br>
@@ -1266,51 +1388,66 @@ as mouse buttons.
 
 <h2>12.13 glutEntryFunc</h2>
 
+<p>Has user-data callback function.</p>
+
 <h2>12.14 glutJoystickFunc</h2>
+
+<p>Has user-data callback function.</p>
 
 <h2>12.15 glutSpaceballMotionFunc</h2>
 
 <p>
 The <tt>glutSpaceballMotionFunc</tt> function is implemented in
-<i>freeglut</i> on X11 only.  On other platforms, function stubs are
+<i>freeglut</i> on X11 and Windows only.  On other platforms, function stubs are
 provided so that GLUT-based programs can compile and link against
 <i>freeglut</i> without modification.
+</p>
+<p>The <tt>glutSpaceballMotionFunc</tt> function sets the window's Spaceball motion callback. <i>freeglut</i> invokes this callback when the user push/pull Spaceball cap in <i>x</i>, <i>y</i>, and <i>z</i> directions.
 </p>
 
 <p><b>Usage</b></p>
 
-<p><tt>void glutSpaceballMotionFunc ( void
-(* callback)( int x, int y, int z )</tt><tt> );</tt></p>
+<p><tt>void glutSpaceballMotionFunc ( void (* callback)( int x, int y, int z ) );</tt></p>
+
+<p>Has user-data callback function.</p>
 
 <p><b>Description</b></p>
 
-<p>TODO</p>
+<p>The <i>x</i>, <i>y</i>, and <i>z</i> arguments indicate the amount of translation in integer along x, y, and z axis respectively.</p>
+<p>The x, y, and z axes form a common OpenGL right-handed coordinate system. A positive value of <i>x</i>, <i>y</i>, or <i>z</i> indicates movement along the positive direction of the respective axis, while the negative one denotes movement along negative direction.</p>
 
 <h2>12.16 glutSpaceballRotateFunc</h2>
 
 <p>
 The <tt>glutSpaceballRotateFunc</tt> function is implemented in
-<i>freeglut</i> on X11 only.  On other platforms, function stubs are
+<i>freeglut</i> on X11 and Windows only. On other platforms, function stubs are
 provided so that GLUT-based programs can compile and link against
 <i>freeglut</i> without modification.
+</p>
+<p>The <tt>glutSpaceballRotateFunc</tt> function sets the window's Spaceball rotation callback. <i>freeglut</i> invokes this callback when the user rotates/twists Spaceball cap.
 </p>
 
 <p><b>Usage</b></p>
 
-<p><tt>void glutSpaceballRotateFunc ( void
-(* callback)( int x, int y, int z )</tt><tt> );</tt></p>
+<p><tt>void glutSpaceballRotateFunc ( void (* callback)( int rx, int ry, int rz ) );</tt></p>
+
+<p>Has user-data callback function.</p>
 
 <p><b>Description</b></p>
 
-<p>TODO</p>
+<p>The <i>rx</i>, <i>ry</i>, and <i>rz</i> arguments indicate the amount of rotation in integer with respect to x, y, and z axis respectively.</p>
+<p>The x, y, and z axes form a common OpenGL right-handed coordinate system. Positive value of <i>rx</i>, <i>ry</i>, or <i>rz</i> indicates counter-clock wise rotation along the respective axis, while negative one denotes clock wise rotation.</p>
 
 <h2>12.17 glutSpaceballButtonFunc</h2>
 
 <p>
 The <tt>glutSpaceballButtonFunc</tt> function is implemented in
-<i>freeglut</i> on X11 only.  On other platforms, function stubs are
+<i>freeglut</i> on X11 and Windows only.  On other platforms, function stubs are
 provided so that GLUT-based programs can compile and link against
 <i>freeglut</i> without modification.
+</p>
+<p>
+The <tt>glutSpaceballButtonFunc</tt> function sets the window's Spaceball button callback. <i>freeglut</i> invokes this callback when the user presses/releases one of the Spaceball buttons.
 </p>
 
 <p><b>Usage</b></p>
@@ -1318,14 +1455,39 @@ provided so that GLUT-based programs can compile and link against
 <p><tt>void glutSpaceballButtonFunc ( void
 (* callback)( int button, int updown )</tt><tt> );</tt></p>
 
+<p>Has user-data callback function.</p>
+
 <p><b>Description</b></p>
 
-<p>TODO</p>
+<p>The <i>button</i> argument may take one of the following defined
+constant values:</p>
+<ul>
+	<li></tt>GLUT_SPACEBALL_BUTTON_A</tt> (0x00000001)</li>
+    <li></tt>GLUT_SPACEBALL_BUTTON_B</tt> (0x00000002)</li>
+    <li></tt>GLUT_SPACEBALL_BUTTON_C</tt> (0x00000004)</li>
+    <li></tt>GLUT_SPACEBALL_BUTTON_D</tt> (0x00000008)</li>
+    <li></tt>GLUT_SPACEBALL_BUTTON_E</tt> (0x00000010)</li>
+</ul>
+<p>The <i>updown</i> argument may take one of the two defined constant
+values:</p>
+<ul>
+	<li>
+		GLUT_DOWN, GLUT_UP indicating if button is pressed or released.
+	</li>
+</ul>
+
+<p><b>Changes From GLUT</b></p>
+
+<p>
+The <tt>GLUT_SPACEBALL_BUTTON_</tt> defines for the button argument of
+the callback are not provided by GLUT, but the numerical values returned
+are the same.
+</p>
 
 <h2>12.18 glutButtonBoxFunc</h2>
 
 <p>
-The <tt>glutDialsFunc</tt> function sets the global dials&buttons box callback. Freeglut calls the callback when there is input from the box buttons.
+The <tt>glutDialsFunc</tt> function sets the global dials&buttons box callback. freeglut calls the callback when there is input from the box buttons.
 </p>
 
 <p><b>Usage</b></p>
@@ -1333,6 +1495,8 @@ The <tt>glutDialsFunc</tt> function sets the global dials&buttons box callback. 
 <p>
 <tt>void glutButtonBoxFunc ( void (* callback)( int button, int updown ) );</tt>
 </p>
+
+<p>Has user-data callback function.</p>
 
 <p><b>Description</b></p>
 
@@ -1350,13 +1514,15 @@ for instance.
 <h2>12.19 glutDialsFunc</h2>
 
 <p>
-The <tt>glutDialsFunc</tt> function sets the global dials&buttons box callback. Freeglut calls the callback when there is input from the box dials.
+The <tt>glutDialsFunc</tt> function sets the global dials&buttons box callback. freeglut calls the callback when there is input from the box dials.
 </p>
 
 <p><b>Usage</b></p>
 
 <p><tt>void glutDialsFunc ( void (* callback)(
 int dial, int value )</tt><tt> );</tt></p>
+
+<p>Has user-data callback function.</p>
 
 <p><b>Description</b></p>
 
@@ -1385,6 +1551,8 @@ that a call to the function will not produce an error..
 <tt>void glutTabletMotionFunc ( void (* callback)( int x, int y ) );</tt>
 </p>
 
+<p>Has user-data callback function.</p>
+
 <p><b>Description</b></p>
 
 <p>The <tt>glutTabletMotionFunc</tt> function
@@ -1407,6 +1575,8 @@ that a call to the function will not produce an error..
 <p><tt>void glutTabletButtonFunc ( void
 (* callback)( int button, int updown, int x, int y )</tt><tt> );</tt></p>
 
+<p>Has user-data callback function.</p>
+
 <p><b>Description</b></p>
 
 <p>
@@ -1423,7 +1593,7 @@ is not implemented in <i>freeglut</i>.
 <p>
 The <tt>glutVisibilityFunc</tt> and the <tt>glutWindowStatusFunc</tt>
 functions set the window's visibility and windowStatus callbacks for the
-current window. Setting one overwrites the other. <i>Freeglut</i> calls
+current window. Setting one overwrites the other. <i>freeglut</i> calls
 these callbacks when the visibility status of a window changes.
 </p>
 
@@ -1432,6 +1602,8 @@ these callbacks when the visibility status of a window changes.
 <p><tt>void glutVisibilityFunc ( void( *callback )( int state ));</tt>
 <br><tt>void glutWindowStatusFunc ( void( *callback )( int state ));</tt>
 </p>
+
+<p>Both functions have user-data callback functions.</p>
 
 <p><b>Description</b></p>
 
@@ -1471,7 +1643,7 @@ discarded.<br>
 Not all window managers support such finegrained callback messages or
 can even ensure basic correctness. On Windows, there are no
 notifications if the visibility status of a window changes and
-<i>FreeGLUT</i> might be in visible state even if the window is fully
+<i>freeglut</i> might be in visible state even if the window is fully
 obscured by other windows.
 </p>
 
@@ -1524,10 +1696,12 @@ windows if GLUT_AUX was set in the displayMode.</li>
 <li>GLUT_MULTISAMPLE - Set the number of samples to request for new
 windows if GLUT_MULTISAMPLE was set in the displayMode.</li>
 <li>GLUT_GEOMETRY_VISUALIZE_NORMALS - Set whether <a
-href="#GeometricObject"><i>FreeGLUT</i>'s geometric object rendering
+href="#GeometricObject"><i>freeglut</i>'s geometric object rendering
 functions</a> also visualize the object's normals or not.</li>
 <li>GLUT_STROKE_FONT_DRAW_JOIN_DOTS - Set whether join dots are drawn
 between line segments when drawing letters of stroke fonts or not.</li>
+<li>GLUT_ALLOW_NEGATIVE_WINDOW_POSITION - Set if negative positions can be
+used for window coordinates.</li>
 </ul>
 </p>
 
@@ -1553,10 +1727,10 @@ These queries are with respect to the current window:
 </p>
 
 <ul>
-<li>GLUT_WINDOW_X - window X position, see <a href="#Conventions">FreeGLUT's conventions</a></li>
-<li>GLUT_WINDOW_Y - window Y position, see <a href="#Conventions">FreeGLUT's conventions</a></li>
-<li>GLUT_WINDOW_WIDTH - window width, see <a href="#Conventions">FreeGLUT's conventions</a></li>
-<li>GLUT_WINDOW_HEIGHT - window height, see <a href="#Conventions">FreeGLUT's conventions</a></li>
+<li>GLUT_WINDOW_X - window X position, see <a href="#Conventions">freeglut's conventions</a></li>
+<li>GLUT_WINDOW_Y - window Y position, see <a href="#Conventions">freeglut's conventions</a></li>
+<li>GLUT_WINDOW_WIDTH - window width, see <a href="#Conventions">freeglut's conventions</a></li>
+<li>GLUT_WINDOW_HEIGHT - window height, see <a href="#Conventions">freeglut's conventions</a></li>
 <li>GLUT_WINDOW_BORDER_WIDTH - window border width</li>
 <li>GLUT_WINDOW_BORDER_HEIGHT - height of non-client area above window,
 including both border and caption (if any)</li>
@@ -1606,6 +1780,7 @@ glutInitDisplayMode or glutSetOption(GLUT_INIT_DISPLAY_MODE, value)</li>
 <li>GLUT_VERSION - Return value will be X*10000+Y*100+Z where X is the
     major version, Y is the minor version and Z is the patch level.
     This query is only supported in <i>freeglut</i> (version 2.0.0 or later).</li>
+<li>GLUT_ALLOW_NEGATIVE_WINDOW_POSITION - 1 if negative window positions are enabled, 0 otherwise</li>
 </ul>
 
 <h2>13.3 glutDeviceGet</h2>
@@ -1653,7 +1828,7 @@ functions can be queried with this function.
 <h1>14. <a name="FontRendering"></a>Font Rendering Functions</h1>
 
 <p>
-<i>Freeglut</i> supports two types of font rendering:  bitmap fonts,
+<i>freeglut</i> supports two types of font rendering:  bitmap fonts,
 which are rendered using the <tt>glBitmap</tt> function call, and stroke
 fonts, which are rendered as sequences of OpenGL line segments. Because
 they are rendered as bitmaps, the bitmap fonts tend to render more quickly
@@ -1670,7 +1845,7 @@ At the moment, <i>freeglut</i> fonts do not support the "`" (backquote) and
 </p>
 
 <p>
-<i>Freeglut</i> supports the following bitmap fonts:
+<i>freeglut</i> supports the following bitmap fonts:
 </p>
 
 <ul>
@@ -1684,13 +1859,13 @@ At the moment, <i>freeglut</i> fonts do not support the "`" (backquote) and
 </ul>
 
 <p>
-<i>Freeglut</i> calls <tt>glRasterPos4v</tt> to advance the cursor by
+<i>freeglut</i> calls <tt>glRasterPos4v</tt> to advance the cursor by
 the width of a character and to render carriage returns when appropriate.
 It does not use any display lists in it rendering in bitmap fonts.
 </p>
 
 <p>
-<i>Freeglut</i> supports
+<i>freeglut</i> supports
 the following stroke fonts:
 </p>
 
@@ -1700,7 +1875,7 @@ the following stroke fonts:
 </ul>
 
 <p>
-<i>Freeglut</i> does not use any display lists in its rendering of stroke
+<i>freeglut</i> does not use any display lists in its rendering of stroke
 fonts.  It calls <tt>glTranslatef</tt> to advance the cursor by the
 width of a character and to render carriage returns when appropriate.
 </p>
@@ -1727,7 +1902,7 @@ code of the character to be rendered </p>
 
 <p>
 The <tt>glutBitmapCharacter</tt> function renders the given character in the specified bitmap font.
-<i>Freeglut</i> automatically sets the necessary
+<i>freeglut</i> automatically sets the necessary
 pixel unpack storage modes and restores the existing modes when it has finished.
 Before the first call to <tt>glutBitMapCharacter</tt> the application
 program should call <tt>glRasterPos*</tt> to set the  position of the character
@@ -1766,7 +1941,7 @@ of characters to be rendered </p>
 <p>
 The <tt>glutBitmapString</tt> function renders the given character
 string in the specified bitmap font.
-<i>Freeglut</i> automatically sets the necessary
+<i>freeglut</i> automatically sets the necessary
 pixel unpack storage modes and restores the existing modes when it has finished.
 Before calling <tt>glutBitMapString</tt> the application program should
 call <tt>glRasterPos*</tt> to set the position of the string in the window.
@@ -2023,7 +2198,7 @@ whose width is to be calculated </p>
 <p>
 The <tt>glutStrokeLength</tt> function returns the width in model units of the given character string in
 the specified stroke font. Because the font is a stroke font, the width
-of an individual character is a floating-point number. <i>Freeglut</i>
+of an individual character is a floating-point number. <i>freeglut</i>
   adds the floating-point widths and rounds the final result to return the
 integer value. Thus the return value may differ from the sum of the
 character widths returned by a series of calls to <tt>glutStrokeWidth</tt>.
@@ -2097,7 +2272,7 @@ are designed such that all characters have (nominally) the same height. </p>
 <h1>15. <a name="GeometricObject"></a>Geometric Object Rendering Functions</h1>
 
 <p>
-<i>Freeglut</i> includes twenty two routines for generating
+<i>freeglut</i> includes twenty two routines for generating
 easily-recognizable 3-d geometric objects.  These routines are
 effectively the same ones that are included in the GLUT library, and
 reflect the functionality available in the <i>aux</i> toolkit described
@@ -2479,7 +2654,7 @@ To draw shapes with shaders (OpenGL 2 and later), one need to upload
 vertices and associated normal vectors and texture coordinates to
 vertex attributes of your shaders. Use these functions to set the
 indices (addresses) of the vertex attributes in your currently active
-shaders before calling the above geometry functions, and <i>FreeGLUT</i>
+shaders before calling the above geometry functions, and <i>freeglut</i>
 will upload the object geometry there. Texture coordinates are only
 generated for the teapot, teacup and teaspoon.
 </p>
@@ -2614,6 +2789,8 @@ Currently, under windows, the first (oldest) touch point also controls
 the mouse cursor, which triggers the non-multi callbacks as
 usual.<br />
 
+All these functions have user-data callback functions.
+
 <br />
 
 Limitation: currently on the cursor id is provided.  It may be
@@ -2642,9 +2819,11 @@ whether/how to implement it.</p>
 
 <ul>
 <li><code>glutInitContextFunc &larr; void</code> : called when the context
-is initialized or re-initialized (e.g. after a pause)</li>
+is initialized or re-initialized (e.g. after a pause). Has user-data callback 
+function.</li>
 <li><code>glutAppStatusFunc &larr; event</code> : called when the
-application's status changes, with event identifying the state entered.
+application's status changes, with event identifying the state entered. Has 
+user-data callback function.
 Possible states:
 <ul>
 <li>application goes on a pause (or a stop) &rarr; GLUT_APPSTATUS_PAUSE</li>
@@ -2699,7 +2878,7 @@ the windows for which you don't want it.</p>
 <p><b>Changes From GLUT</b></p>
 
 <p>Nate Robbins' port of GLUT to win32 did not implement
-<tt>glutSetKeyRepeat</tt>, but <i>FreeGLUT</i>'s behavior should conform on all
+<tt>glutSetKeyRepeat</tt>, but <i>freeglut</i>'s behavior should conform on all
 platforms to GLUT's behavior on X11.</p>
 
 <h2>21.2 glutForceJoystickFunc</h2>
@@ -2735,7 +2914,7 @@ icon as an example.
 
 <h2>21.2 <a name="GLUT_State"></a>GLUT State</h2>
 
-<h2>21.3 <a name="Freeglut.h_Header"></a>"freeglut.h" Header File</h2>
+<h2>21.3 <a name="freeglut.h_Header"></a>"freeglut.h" Header File</h2>
 
 <p>
 Application programmers who are porting their GLUT programs to <i>freeglut</i> may continue
@@ -2756,7 +2935,7 @@ Programs which use the <i>freeglut</i>-specific extensions to GLUT should includ
 It was initially planned to
 define <code>FREEGLUT_VERSION_2_0</code>, <code>FREEGLUT_VERSION_2_1</code>, <code>FREEGLUT_VERSION_2_2</code>,
 etc., but this was only done for <code>FREEGLUT_VERSION_2_0</code>.
-This constant still exist in current FreeGLUT releases but is
+This constant still exist in current freeglut releases but is
 deprecated.
 </p>
 

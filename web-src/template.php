@@ -40,7 +40,7 @@ function generateHeader($self)
 	<title><? echo $title ?></title>
 </head>
 <body>
-<?
+<?php
 	generateSideBar($self);
 }
 
@@ -49,7 +49,7 @@ function generateFooter()
 ?>
 </body>
 </html>
-<?
+<?php
 }
 
 function printMenuItem($item, $current_page) 
@@ -71,7 +71,7 @@ function generateSideBar($current_page)
 <div class="navbar-left">
 	<span class="navbar-header"><a href="/"><img src="/images/freeglut_logo.png" alt="freeglut logo" style="border: 0;" /></a></span><br/>
 	<span class="navbar-smalltext">The Free OpenGL Utility Toolkit</span><br/><br/>
-<?
+<?php
 	# Print out each sidebar entry one by one...
 	reset($sidebarentries);
 	while (next($sidebarentries))
@@ -93,10 +93,6 @@ function generateSideBar($current_page)
  		<img src="http://sourceforge.net/sflogo.php?group_id=1032" width="88" height="31" alt="SourceForge" style="border: 0;" /></a>
 	</span>
 	<span class="navbar-header">
-		<a href="http://freshmeat.net/">
- 		<img src="/images/freshmeat.png" width="88" height="31" alt="SourceForge" style="border: 0;" /></a>
-	</span>
-	<span class="navbar-header">
 		<a href="http://validator.w3.org/check/referer">
 		<img src="http://www.w3.org/Icons/valid-xhtml10" alt="Valid XHTML 1.0!" height="31" width="88" style="border: 0;"/></a>
 	</span>
@@ -105,7 +101,7 @@ function generateSideBar($current_page)
 	<? echo "\t<a href=\"$svn_location\">View PHP Source</a>"; ?>
 	</span>
 </div>
-<?
+<?php
 }
 
 function setPageTitle($title_inc) 
