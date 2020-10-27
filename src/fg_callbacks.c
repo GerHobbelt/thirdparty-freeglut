@@ -128,7 +128,7 @@ IMPLEMENT_GLUT_CALLBACK_FUNC_ARG0_2NAME(MenuDestroy, Destroy)
 /* Implement all these callback setter functions... */
 IMPLEMENT_CURRENT_WINDOW_CALLBACK_FUNC_ARG2(Position)
 IMPLEMENT_CURRENT_WINDOW_CALLBACK_FUNC_ARG3_USER(Keyboard,unsigned char,int,int)
-IMPLEMENT_CURRENT_WINDOW_CALLBACK_FUNC_ARG3_USER(KeyboardExt,unsigned char,int,int)
+IMPLEMENT_CURRENT_WINDOW_CALLBACK_FUNC_ARG3_USER(KeyboardExt,int,int,int)
 IMPLEMENT_CURRENT_WINDOW_CALLBACK_FUNC_ARG3_USER(KeyboardUp,unsigned char,int,int)
 IMPLEMENT_CURRENT_WINDOW_CALLBACK_FUNC_ARG3_USER(KeyboardDown,unsigned char,int,int)
 IMPLEMENT_CURRENT_WINDOW_CALLBACK_FUNC_ARG3(Special)
@@ -178,7 +178,7 @@ void fghDefaultReshape( int width, int height, FGCBUserData userData )
 void FGAPIENTRY glutReshapeFuncUcall( FGCBReshapeUC callback, FGCBUserData userData )
 {
     FREEGLUT_EXIT_IF_NOT_INITIALISED ( "glutReshapeFuncUcall" );
-    
+
     if( !callback )
     {
         callback = fghDefaultReshape;
@@ -252,15 +252,15 @@ void FGAPIENTRY glutJoystickFuncUcall( FGCBJoystickUC callback, int pollInterval
            fgStructure.CurrentWindow->State.JoystickPollRate <= 0 ||        /* Joystick callback was disabled */
            !FETCH_WCB(*fgStructure.CurrentWindow,Joystick)
          ) &&
-         ( 
+         (
            callback && ( pollInterval > 0 )                                 /* but is now enabled */
          ) )
         ++fgState.NumActiveJoysticks;
-    else if ( ( 
+    else if ( (
                 fgStructure.CurrentWindow->State.JoystickPollRate > 0 &&    /* Joystick callback was enabled */
                 FETCH_WCB(*fgStructure.CurrentWindow,Joystick)
-              ) &&  
-              ( 
+              ) &&
+              (
                 !callback || ( pollInterval <= 0 )                          /* but is now disabled */
               ) )
         --fgState.NumActiveJoysticks;
