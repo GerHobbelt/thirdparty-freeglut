@@ -143,7 +143,7 @@
  */
 FGAPI void    FGAPIENTRY glutMainLoopEvent( void );
 FGAPI void    FGAPIENTRY glutLeaveMainLoop( void );
-FGAPI void    FGAPIENTRY glutExit         ( void );
+FGAPI void    FGAPIENTRY glutExit( void );
 
 /*
  * Window management functions, see fg_window.c
@@ -170,7 +170,7 @@ FGAPI void    FGAPIENTRY glutMenuDestroyFunc( void (* callback)( void ) );
 /*
  * State setting and retrieval functions, see fg_state.c
  */
-FGAPI void    FGAPIENTRY glutSetOption ( GLenum option_flag, int value );
+FGAPI void    FGAPIENTRY glutSetOption( GLenum option_flag, int value );
 FGAPI int *   FGAPIENTRY glutGetModeValues(GLenum mode, int * size);
 /* A.Donev: User-data manipulation */
 FGAPI void*   FGAPIENTRY glutGetWindowData( void );
@@ -200,8 +200,8 @@ FGAPI void    FGAPIENTRY glutStrokeString( void* font, const unsigned char *stri
  */
 FGAPI void    FGAPIENTRY glutWireRhombicDodecahedron( void );
 FGAPI void    FGAPIENTRY glutSolidRhombicDodecahedron( void );
-FGAPI void    FGAPIENTRY glutWireSierpinskiSponge ( int num_levels, double offset[3], double scale );
-FGAPI void    FGAPIENTRY glutSolidSierpinskiSponge ( int num_levels, double offset[3], double scale );
+FGAPI void    FGAPIENTRY glutWireSierpinskiSponge( int num_levels, double offset[3], double scale );
+FGAPI void    FGAPIENTRY glutSolidSierpinskiSponge( int num_levels, double offset[3], double scale );
 FGAPI void    FGAPIENTRY glutWireCylinder( double radius, double height, GLint slices, GLint stacks);
 FGAPI void    FGAPIENTRY glutSolidCylinder( double radius, double height, GLint slices, GLint stacks);
 
