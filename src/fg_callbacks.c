@@ -213,7 +213,7 @@ static void fghVisibility( int status, FGCBUserData userData )
     freeglut_return_if_fail( fgStructure.CurrentWindow );
 
     /* Translate window status func states to visibility states */
-    if( ( status == GLUT_HIDDEN)  || ( status == GLUT_FULLY_COVERED) )
+    if( ( status == GLUT_HIDDEN) || ( status == GLUT_FULLY_COVERED) )
         vis_status = GLUT_NOT_VISIBLE;
     else    /* GLUT_FULLY_RETAINED, GLUT_PARTIALLY_RETAINED */
         vis_status = GLUT_VISIBLE;

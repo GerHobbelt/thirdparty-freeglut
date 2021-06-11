@@ -681,9 +681,9 @@ do                                            \
     if( FETCH_WCB( window, cbname ) )         \
     {                                         \
         FGCB ## cbname ## UC func = (FGCB ## cbname ## UC)(FETCH_WCB( window, cbname )); \
-        FGCBUserData userData = FETCH_USER_DATA_WCB( window, cbname ); \
+        FGCBUserData __userData = FETCH_USER_DATA_WCB( window, cbname ); \
         fgSetWindow( &window );               \
-        func EXPAND_WCB( cbname )(( arg_list, userData )); \
+        func EXPAND_WCB( cbname )(( arg_list, __userData )); \
     }                                         \
 } while( 0 )
 
