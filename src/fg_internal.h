@@ -131,6 +131,9 @@
 #endif
 
 #if defined(_MSC_VER)
+#ifndef _CRTDBG_MAP_ALLOC
+#define _CRTDBG_MAP_ALLOC
+#endif
 #include <crtdbg.h>
 #endif
 
