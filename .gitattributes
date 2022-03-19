@@ -13,14 +13,6 @@ android/Android.mk -text
 android/README -text
 android_toolchain.cmake -text
 config.h.in svn_keywords=Author+Date+Id+Revision
-doc/download.html svn_keywords=Author+Date+Id+Revision
-doc/freeglut.html svn_keywords=Author+Date+Id+Revision
-doc/freeglut_logo.png -text
-doc/freeglut_user_interface.html svn_keywords=Author+Date+Id+Revision
-doc/index.html svn_keywords=Author+Date+Id+Revision
-doc/ogl_sm.png -text
-doc/progress.html svn_keywords=Author+Date+Id+Revision
-doc/structure.html svn_keywords=Author+Date+Id+Revision
 freeglut.pc.in -text
 freeglut.rc.in svn_keywords=Author+Date+Id+Revision
 include/GL/freeglut.h svn_keywords=Author+Date+Id+Revision
