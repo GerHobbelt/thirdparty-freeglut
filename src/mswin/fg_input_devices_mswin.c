@@ -37,11 +37,13 @@
 #include <crtdbg.h>
 #endif
 
-typedef struct {
+struct _serialport {
    HANDLE fh;
    COMMTIMEOUTS timeouts_save;
    DCB dcb_save;
-} SERIALPORT;
+};
+
+typedef struct _serialport SERIALPORT;
 
 /* Serial Port Prototypes */
 SERIALPORT *fg_serial_open ( const char *device );

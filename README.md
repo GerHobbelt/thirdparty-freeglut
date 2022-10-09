@@ -3,6 +3,7 @@ FreeGLUT
 
 ![GNU/Linux (X11) build status](https://github.com/FreeGLUTProject/freeglut/actions/workflows/build_gnulinux_x11.yml/badge.svg)
 ![Windows build status](https://github.com/FreeGLUTProject/freeglut/actions/workflows/build_win_msvc.yml/badge.svg)
+![MacOS X (X11) build status](https://github.com/FreeGLUTProject/freeglut/actions/workflows/build_macosx_x11.yml/badge.svg)
 
 
 This readme file applies to the git clone of FreeGLUT's svn repo on [sourceforge.net](http://freeglut.sourceforge.net/) that is hosted on [github](https://github.com/dcnieho/FreeGLUT). This is provided here to enable user to contribute easier.
