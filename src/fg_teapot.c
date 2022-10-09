@@ -42,7 +42,7 @@
 
 /* Bernstein coefficients only have to be precomputed once (number of patch subdivisions is fixed)
  * Can thus define arrays for them here, they will be filled upon first use.
- * 3rd order Bezier surfaces have 4 Bernstein coeffs.
+ * 3rd order BÃ©zier surfaces have 4 Bernstein coeffs.
  * Have separate caches for solid and wire as they use a different number of subdivisions
  * _0 is for Bernstein polynomials, _1 for their first derivative (which we need for normals)
  */
@@ -192,15 +192,15 @@ static void rotOrReflect(int flag, int nVals, int nSubDivs, GLfloat *vals)
         int i1=nVals, i2=nVals*2, i3=nVals*3;
         for (o=0; o<nVals; o+=3)
         {
-            /* 90° rotation */
+            /* 90Â° rotation */
             vals[i1+o+0] =  vals[o+2];
             vals[i1+o+1] =  vals[o+1];
             vals[i1+o+2] = -vals[o+0];
-            /* 180° rotation */
+            /* 180Â° rotation */
             vals[i2+o+0] = -vals[o+0];
             vals[i2+o+1] =  vals[o+1];
             vals[i2+o+2] = -vals[o+2];
-            /* 270° rotation */
+            /* 270Â° rotation */
             vals[i3+o+0] = -vals[o+2];
             vals[i3+o+1] =  vals[o+1];
             vals[i3+o+2] =  vals[o+0];
@@ -235,7 +235,7 @@ static int evalBezierWithNorm(GLfloat cp[4][4][3], int nSubDivs, float (*bern_0)
     {
         for (v=0; v<nSubDivs; v++, o+=3)
         {
-            /* for normals, get two tangents at the vertex using partial derivatives of 2D Bezier grid */
+            /* for normals, get two tangents at the vertex using partial derivatives of 2D BÃ©zier grid */
             float tan1[3]={0}, tan2[3]={0}, len;
             for (i=0; i<=3; i++)
             {
@@ -367,7 +367,7 @@ static void fghTeaset( GLfloat scale, GLboolean useWireMode,
             int i;
             for (i=0; i<16; i++)
             {
-                /* Original code draws with a 270° rot around X axis, a scaling and a translation along the Z-axis.
+                /* Original code draws with a 270Â° rot around X axis, a scaling and a translation along the Z-axis.
                  * Incorporating these in the control points is much cheaper than transforming all the vertices.
                  * Original:
                  * glRotated( 270.0, 1.0, 0.0, 0.0 );
@@ -379,7 +379,7 @@ static void fghTeaset( GLfloat scale, GLboolean useWireMode,
                 cp[i/4][i%4][2] = -cpdata[patchdata[p][i]][1]         *scale/2.f;
             }
 
-            /* eval bezier patch */
+            /* eval BÃ©zier patch */
             if (!*inited)   /* first time, generate normals as well */
                 o += evalBezierWithNorm(cp,nSubDivs,bern_0,bern_1, flag, normalFix, verts+o,norms+o);
             else            /* only need to regen vertices */

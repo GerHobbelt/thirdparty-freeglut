@@ -69,6 +69,7 @@ int fghChooseConfig(EGLConfig* config) {
   ATTRIB_VAL(EGL_SAMPLES, (fgState.DisplayMode & GLUT_MULTISAMPLE) ? fgState.SampleNumber : 0);
   ATTRIB(EGL_NONE);
 
+  EGLint num_config;
   if (!eglChooseConfig(fgDisplay.pDisplay.egl.Display,
                attributes, config, 1, &num_config)) {
     fgWarning("eglChooseConfig: error %x\n", eglGetError());
@@ -94,7 +95,7 @@ EGLContext fghCreateNewContextEGL( SFG_Window* window ) {
   ATTRIB_VAL(EGL_CONTEXT_CLIENT_VERSION, fgState.MajorVersion);
 #ifdef EGL_CONTEXT_MINOR_VERSION
   if (fgDisplay.pDisplay.egl.MinorVersion >= 5) {
-    /* EGL_CONTEXT_CLIENT_VERSION == EGL_CONTEXT_MAJOR_VERSION */
+    // EGL_CONTEXT_CLIENT_VERSION == EGL_CONTEXT_MAJOR_VERSION
     ATTRIB_VAL(EGL_CONTEXT_MINOR_VERSION, fgState.MinorVersion);
   }
 #endif

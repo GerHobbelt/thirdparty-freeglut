@@ -44,6 +44,13 @@
 #define GLUT_KEY_CTRL_R             0x0073
 #define GLUT_KEY_ALT_L              0x0074
 #define GLUT_KEY_ALT_R              0x0075
+#define GLUT_KEY_SUPER_L            0x0076
+#define GLUT_KEY_SUPER_R            0x0077
+
+/*
+ * Additional GLUT modifiers
+ */
+#define GLUT_ACTIVE_SUPER           0x0008
 
 /*
  * GLUT API Extension macro definitions -- behaviour when the user clicks on an "x" to close a window
@@ -143,7 +150,7 @@
  */
 FGAPI void    FGAPIENTRY glutMainLoopEvent( void );
 FGAPI void    FGAPIENTRY glutLeaveMainLoop( void );
-FGAPI void    FGAPIENTRY glutExit         ( void );
+FGAPI void    FGAPIENTRY glutExit( void );
 
 /*
  * Window management functions, see fg_window.c
@@ -159,6 +166,7 @@ FGAPI void    FGAPIENTRY glutSetMenuFont( int menuID, void* font );
 /*
  * Window-specific callback functions, see fg_callbacks.c
  */
+FGAPI void    FGAPIENTRY glutKeyboardExtFunc( void (* callback)( int, int, int ) );
 FGAPI void    FGAPIENTRY glutMouseWheelFunc( void (* callback)( int, int, int, int ) );
 FGAPI void    FGAPIENTRY glutPositionFunc( void (* callback)( int, int ) );
 FGAPI void    FGAPIENTRY glutCloseFunc( void (* callback)( void ) );
@@ -169,13 +177,22 @@ FGAPI void    FGAPIENTRY glutMenuDestroyFunc( void (* callback)( void ) );
 /*
  * State setting and retrieval functions, see fg_state.c
  */
-FGAPI void    FGAPIENTRY glutSetOption ( GLenum option_flag, int value );
+FGAPI void    FGAPIENTRY glutSetOption( GLenum option_flag, int value );
 FGAPI int *   FGAPIENTRY glutGetModeValues(GLenum mode, int * size);
 /* A.Donev: User-data manipulation */
 FGAPI void*   FGAPIENTRY glutGetWindowData( void );
 FGAPI void    FGAPIENTRY glutSetWindowData(void* data);
 FGAPI void*   FGAPIENTRY glutGetMenuData( void );
 FGAPI void    FGAPIENTRY glutSetMenuData(void* data);
+
+/*
+ * Clipboard access
+ */
+#define GLUT_CLIPBOARD 0
+#define GLUT_PRIMARY 1
+#define GLUT_SECONDARY 2
+FGAPI void         FGAPIENTRY glutSetClipboard(int selection, const char *string);
+FGAPI const char * FGAPIENTRY glutGetClipboard(int selection);
 
 /*
  * Font stuff, see fg_font.c
@@ -190,8 +207,8 @@ FGAPI void    FGAPIENTRY glutStrokeString( void* font, const unsigned char *stri
  */
 FGAPI void    FGAPIENTRY glutWireRhombicDodecahedron( void );
 FGAPI void    FGAPIENTRY glutSolidRhombicDodecahedron( void );
-FGAPI void    FGAPIENTRY glutWireSierpinskiSponge ( int num_levels, double offset[3], double scale );
-FGAPI void    FGAPIENTRY glutSolidSierpinskiSponge ( int num_levels, double offset[3], double scale );
+FGAPI void    FGAPIENTRY glutWireSierpinskiSponge( int num_levels, double offset[3], double scale );
+FGAPI void    FGAPIENTRY glutSolidSierpinskiSponge( int num_levels, double offset[3], double scale );
 FGAPI void    FGAPIENTRY glutWireCylinder( double radius, double height, GLint slices, GLint stacks);
 FGAPI void    FGAPIENTRY glutSolidCylinder( double radius, double height, GLint slices, GLint stacks);
 

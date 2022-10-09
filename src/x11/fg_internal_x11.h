@@ -63,6 +63,8 @@ struct tagSFG_PlatformDisplay
     int             NetWMSupported;     /* Flag for EWMH Window Managers     */
     Atom            NetWMPid;           /* The _NET_WM_PID atom              */
     Atom            ClientMachine;      /* The client machine name atom      */
+    XIM             IM;                 /* The input method                  */
+    XIMStyle        InputStyle;         /* The input method style            */
 
 #ifdef HAVE_X11_EXTENSIONS_XRANDR_H
     int prev_xsz, prev_ysz;
@@ -107,6 +109,7 @@ struct tagSFG_PlatformContext
 #else
     GLXFBConfig    FBConfig;        /* The window's FBConfig               */
 #endif
+    XIC IC;                         /* The window's input context          */
 };
 
 
@@ -136,8 +139,21 @@ struct tagSFG_PlatformWindowState
 #include <string.h>
 
 #    if defined(__FreeBSD__) || defined(__FreeBSD_kernel__) || defined(__NetBSD__)
+/* XXX The below hack is done until freeglut's autoconf is updated. */
 #        define HAVE_USB_JS    1
-#        include <sys/joystick.h>
+
+#        if defined(__FreeBSD__) || defined(__FreeBSD_kernel__)
+#            include <sys/joystick.h>
+#        else
+/*
+ * XXX NetBSD/amd64 systems may find that they have to steal the
+ * XXX /usr/include/machine/joystick.h from a NetBSD/i386 system.
+ * XXX I cannot comment whether that works for the interface, but
+ * XXX it lets you compile...(^&  I do not think that we can do away
+ * XXX with this header.
+ */
+#            include <machine/joystick.h>         /* For analog joysticks */
+#        endif
 #        define JS_DATA_TYPE joystick
 #        define JS_RETURN (sizeof(struct JS_DATA_TYPE))
 #    endif

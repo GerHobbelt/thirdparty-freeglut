@@ -29,7 +29,9 @@
 #include <GL/freeglut.h>
 #include "../fg_internal.h"
 #include <errno.h>
+#include <limits.h>
 #include <stdarg.h>
+#include <sys/select.h>
 
 
 /*
@@ -135,6 +137,8 @@ int fgPlatformGetModifiers( int state )
         ret |= GLUT_ACTIVE_CTRL;
     if( state & Mod1Mask )
         ret |= GLUT_ACTIVE_ALT;
+    if( state & Mod2Mask )
+        ret |= GLUT_ACTIVE_SUPER;
 
     return ret;
 }
@@ -579,6 +583,285 @@ __fg_unused static void fghPrintEvent( XEvent *event )
     }
 }
 
+/* UTF-8 decoding routine */
+enum
+{
+    Runeerror = 0xFFFD, /* decoding error in UTF */
+
+    Bit1 = 7,
+    Bitx = 6,
+    Bit2 = 5,
+    Bit3 = 4,
+    Bit4 = 3,
+    Bit5 = 2,
+
+    T1 = ((1<<(Bit1+1))-1) ^ 0xFF, /* 0000 0000 */
+    Tx = ((1<<(Bitx+1))-1) ^ 0xFF, /* 1000 0000 */
+    T2 = ((1<<(Bit2+1))-1) ^ 0xFF, /* 1100 0000 */
+    T3 = ((1<<(Bit3+1))-1) ^ 0xFF, /* 1110 0000 */
+    T4 = ((1<<(Bit4+1))-1) ^ 0xFF, /* 1111 0000 */
+    T5 = ((1<<(Bit5+1))-1) ^ 0xFF, /* 1111 1000 */
+
+    Rune1 = (1<<(Bit1+0*Bitx))-1, /* 0000 0000 0111 1111 */
+    Rune2 = (1<<(Bit2+1*Bitx))-1, /* 0000 0111 1111 1111 */
+    Rune3 = (1<<(Bit3+2*Bitx))-1, /* 1111 1111 1111 1111 */
+    Rune4 = (1<<(Bit4+3*Bitx))-1, /* 0001 1111 1111 1111 1111 1111 */
+
+    Maskx = (1<<Bitx)-1,	/* 0011 1111 */
+    Testx = Maskx ^ 0xFF,	/* 1100 0000 */
+
+    Bad = Runeerror,
+};
+
+static int chartorune(int *rune, const char *str)
+{
+    int c, c1, c2, c3;
+    int l;
+
+    /*
+     * one character sequence
+     *	00000-0007F => T1
+     */
+    c = *(const unsigned char*)str;
+    if(c < Tx) {
+        *rune = c;
+        return 1;
+    }
+
+    /*
+     * two character sequence
+     *	0080-07FF => T2 Tx
+     */
+    c1 = *(const unsigned char*)(str+1) ^ Tx;
+    if(c1 & Testx)
+        goto bad;
+    if(c < T3) {
+        if(c < T2)
+            goto bad;
+        l = ((c << Bitx) | c1) & Rune2;
+        if(l <= Rune1)
+            goto bad;
+        *rune = l;
+        return 2;
+    }
+
+    /*
+     * three character sequence
+     *	0800-FFFF => T3 Tx Tx
+     */
+    c2 = *(const unsigned char*)(str+2) ^ Tx;
+    if(c2 & Testx)
+        goto bad;
+    if(c < T4) {
+        l = ((((c << Bitx) | c1) << Bitx) | c2) & Rune3;
+        if(l <= Rune2)
+            goto bad;
+        *rune = l;
+        return 3;
+    }
+
+    /*
+     * four character sequence (21-bit value)
+     *	10000-1FFFFF => T4 Tx Tx Tx
+     */
+    c3 = *(const unsigned char*)(str+3) ^ Tx;
+    if (c3 & Testx)
+        goto bad;
+    if (c < T5) {
+        l = ((((((c << Bitx) | c1) << Bitx) | c2) << Bitx) | c3) & Rune4;
+        if (l <= Rune3)
+            goto bad;
+        *rune = l;
+        return 4;
+    }
+    /*
+     * Support for 5-byte or longer UTF-8 would go here, but
+     * since we don't have that, we'll just fall through to bad.
+     */
+
+    /*
+     * bad decoding
+     */
+bad:
+    *rune = Bad;
+    return 1;
+}
+
+extern char *fgClipboardBuffer[3];
+
+static Atom fghGetAtom(const char *name)
+{
+    return XInternAtom(fgDisplay.pDisplay.Display, name, False);
+}
+
+static void fgHandleSelectionNotify(XEvent *event)
+{
+    Display *dpy = fgDisplay.pDisplay.Display;
+    Atom actual_type;
+    int actual_format;
+    unsigned long item_count;
+    unsigned long bytes_after;
+    unsigned char *prop;
+
+    if (event->xselection.property == None)
+    {
+        fgWarning("Couldn't convert selection to UTF-8 string.");
+        return;
+    }
+
+    XGetWindowProperty(dpy, event->xselection.requestor, event->xselection.property,
+            0, LONG_MAX, True, AnyPropertyType,
+            &actual_type, &actual_format, &item_count, &bytes_after, &prop);
+
+    if (actual_type == fghGetAtom("UTF8_STRING"))
+    {
+        if (event->xselection.selection == fghGetAtom("CLIPBOARD"))
+        {
+            free(fgClipboardBuffer[GLUT_CLIPBOARD]);
+            fgClipboardBuffer[GLUT_CLIPBOARD] = strdup((char*)prop);
+        }
+        if (event->xselection.selection == XA_PRIMARY)
+        {
+            free(fgClipboardBuffer[GLUT_PRIMARY]);
+            fgClipboardBuffer[GLUT_PRIMARY] = strdup((char*)prop);
+        }
+        if (event->xselection.selection == XA_SECONDARY)
+        {
+            free(fgClipboardBuffer[GLUT_SECONDARY]);
+            fgClipboardBuffer[GLUT_SECONDARY] = strdup((char*)prop);
+        }
+    }
+
+    XFree(prop);
+}
+
+static void fgHandleSelectionClear(XEvent *event)
+{
+    if (event->xselectionclear.selection == fghGetAtom("CLIPBOARD"))
+    {
+        free(fgClipboardBuffer[GLUT_CLIPBOARD]);
+        fgClipboardBuffer[GLUT_CLIPBOARD] = NULL;
+    }
+    else if (event->xselectionclear.selection == XA_PRIMARY)
+    {
+        free(fgClipboardBuffer[GLUT_PRIMARY]);
+        fgClipboardBuffer[GLUT_PRIMARY] = NULL;
+    }
+    else if (event->xselectionclear.selection == XA_SECONDARY)
+    {
+        free(fgClipboardBuffer[GLUT_SECONDARY]);
+        fgClipboardBuffer[GLUT_SECONDARY] = NULL;
+    }
+}
+
+static void fgHandleSelectionRequest(XEvent *event)
+{
+    Display *dpy = fgDisplay.pDisplay.Display;
+    Window requestor = event->xselectionrequest.requestor;
+    Atom selection = event->xselectionrequest.selection;
+    Atom target = event->xselectionrequest.target;
+    Atom property = event->xselectionrequest.property;
+    Atom time = event->xselectionrequest.time;
+    XEvent response;
+    char *text;
+
+    if (property == None)
+        property = target;
+
+    response.xselection.type = SelectionNotify;
+    response.xselection.send_event = True;
+    response.xselection.display = dpy;
+    response.xselection.requestor = requestor;
+    response.xselection.selection = selection;
+    response.xselection.target = target;
+    response.xselection.property = property;
+    response.xselection.time = time;
+
+    if (selection == fghGetAtom("CLIPBOARD"))
+        text = fgClipboardBuffer[GLUT_CLIPBOARD];
+    else if (selection == XA_PRIMARY)
+        text = fgClipboardBuffer[GLUT_PRIMARY];
+    else if (selection == XA_SECONDARY)
+        text = fgClipboardBuffer[GLUT_SECONDARY];
+    else
+        return;
+    if (!text)
+        return;
+
+    if (target == fghGetAtom("TARGETS"))
+    {
+        Atom list[4] = {
+            fghGetAtom("TARGETS"),
+            fghGetAtom("TIMESTAMP"),
+            XA_STRING,
+            fghGetAtom("UTF8_STRING")
+        };
+        XChangeProperty(dpy, requestor, property, target,
+                32, PropModeReplace, (unsigned char *)list, sizeof(list)/sizeof(Atom));
+    }
+    else if (target == XA_STRING || target == fghGetAtom("UTF8_STRING"))
+    {
+        XChangeProperty(dpy, requestor, property, target,
+                8, PropModeReplace, (unsigned char *)text, strlen(text));
+    }
+
+    XSendEvent(dpy, requestor, False, 0, &response);
+}
+
+void fgPlatformSetClipboard(int selection, const char *text)
+{
+    Display *dpy = fgDisplay.pDisplay.Display;
+    Window window = fgStructure.CurrentWindow->Window.Handle;
+    Atom xselection;
+    if (selection == GLUT_CLIPBOARD)
+        xselection = fghGetAtom("CLIPBOARD");
+    else if (selection == GLUT_PRIMARY)
+        xselection = XA_PRIMARY;
+    else if (selection == GLUT_SECONDARY)
+        xselection = XA_SECONDARY;
+    else
+        return;
+
+    free(fgClipboardBuffer[selection]);
+    fgClipboardBuffer[selection] = strdup(text);
+
+    XSetSelectionOwner(dpy, xselection, window, CurrentTime);
+}
+
+static Bool isSelectionNotify(Display *dpi, XEvent *event, XPointer arg)
+{
+    return (event->type == SelectionNotify);
+}
+
+const char *fgPlatformGetClipboard(int selection)
+{
+    Display *dpy = fgDisplay.pDisplay.Display;
+    Window window = fgStructure.CurrentWindow->Window.Handle;
+    Atom xselection;
+    Window owner;
+    XEvent event;
+
+    if (selection == GLUT_CLIPBOARD)
+        xselection = fghGetAtom("CLIPBOARD");
+    else if (selection == GLUT_PRIMARY)
+        xselection = XA_PRIMARY;
+    else if (selection == GLUT_SECONDARY)
+        xselection = XA_SECONDARY;
+    else
+        return NULL;
+
+    owner = XGetSelectionOwner(dpy, xselection);
+    if (!owner)
+        return NULL;
+    if (owner != window)
+    {
+        XConvertSelection(dpy, xselection, fghGetAtom("UTF8_STRING"), xselection, window, CurrentTime);
+        XIfEvent(dpy, &event, isSelectionNotify, NULL);
+        fgHandleSelectionNotify(&event);
+    }
+
+    return fgClipboardBuffer[selection];
+}
 
 void fgPlatformProcessSingleEvent ( void )
 {
@@ -603,6 +886,8 @@ void fgPlatformProcessSingleEvent ( void )
 #if _DEBUG
         fghPrintEvent( &event );
 #endif
+	if (XFilterEvent(&event, None))
+		continue;
 
         switch( event.type )
         {
@@ -629,6 +914,16 @@ void fgPlatformProcessSingleEvent ( void )
 
                 return;
             }
+            break;
+
+        case SelectionClear:
+            fgHandleSelectionClear(&event);
+            break;
+        case SelectionRequest:
+            fgHandleSelectionRequest(&event);
+            break;
+        case SelectionNotify:
+            fgHandleSelectionNotify(&event);
             break;
 
             /*
@@ -1012,6 +1307,14 @@ void fgPlatformProcessSingleEvent ( void )
                     case XK_Control_R: special = GLUT_KEY_CTRL_R;     break;
                     case XK_Alt_L:     special = GLUT_KEY_ALT_L;      break;
                     case XK_Alt_R:     special = GLUT_KEY_ALT_R;      break;
+                    case XK_Meta_L:
+                    case XK_Super_L:
+                        special = GLUT_KEY_SUPER_L;
+                        break;
+                    case XK_Meta_R:
+                    case XK_Super_R:
+                        special = GLUT_KEY_SUPER_R;
+                        break;
                     }
 
                     /*

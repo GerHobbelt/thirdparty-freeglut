@@ -284,14 +284,14 @@ static int fghJoystickInitializeHID(struct os_specific_s *os,
 
 
 /*this should be defined in a header file */
-#define MAX_NUM_JOYSTICKS  2
+#define MAX_NUM_JOYSTICKS  2   
 extern SFG_Joystick *fgJoystick [ MAX_NUM_JOYSTICKS ];
 
 void fgPlatformJoystickRawRead( SFG_Joystick* joy, int* buttons, float* axes )
 {
     int status;
 
-#if defined(__FreeBSD__) || defined(__FreeBSD_kernel__)
+#if defined(__FreeBSD__) || defined(__FreeBSD_kernel__) || defined(__NetBSD__)
     int len;
 
     if ( joy->pJoystick.os->is_analog )
@@ -456,8 +456,8 @@ void fgPlatformJoystickRawRead( SFG_Joystick* joy, int* buttons, float* axes )
 
 void fgPlatformJoystickOpen( SFG_Joystick* joy )
 {
-#if defined( __FreeBSD__ ) || defined(__FreeBSD_kernel__)
-    int i = 0;
+#if defined( __FreeBSD__ ) || defined(__FreeBSD_kernel__) || defined( __NetBSD__ )
+	int i = 0;
        char *cp;
 #endif
 #ifdef JS_NEW
@@ -470,7 +470,7 @@ void fgPlatformJoystickOpen( SFG_Joystick* joy )
 #  endif
 #endif
 
-#if defined( __FreeBSD__ ) || defined(__FreeBSD_kernel__)
+#if defined( __FreeBSD__ ) || defined(__FreeBSD_kernel__) || defined( __NetBSD__ )
     for( i = 0; i < _JS_MAX_AXES; i++ )
         joy->pJoystick.os->cache_axes[ i ] = 0.0f;
 
@@ -650,7 +650,7 @@ void fgPlatformJoystickOpen( SFG_Joystick* joy )
 
 void fgPlatformJoystickInit( SFG_Joystick *fgJoystick[], int ident )
 {
-#if defined( __FreeBSD__ ) || defined(__FreeBSD_kernel__)
+#if defined( __FreeBSD__ ) || defined(__FreeBSD_kernel__) || defined( __NetBSD__ )
     fgJoystick[ ident ]->id = ident;
     fgJoystick[ ident ]->error = GL_FALSE;
 
@@ -677,7 +677,7 @@ void fgPlatformJoystickInit( SFG_Joystick *fgJoystick[], int ident )
 
 void fgPlatformJoystickClose ( int ident )
 {
-#if defined( __FreeBSD__ ) || defined(__FreeBSD_kernel__)
+#if defined( __FreeBSD__ ) || defined(__FreeBSD_kernel__) || defined( __NetBSD__ )
     if( fgJoystick[ident]->pJoystick.os )
     {
         if( ! fgJoystick[ ident ]->error )

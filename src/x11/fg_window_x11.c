@@ -154,6 +154,7 @@ void fgPlatformOpenWindow( SFG_Window* window, const char* title,
     unsigned long mask;
     unsigned int current_DisplayMode = fgState.DisplayMode ;
     XEvent fakeEvent = {0};
+    long event_mask;
 
     /* Save the display mode if we are creating a menu window */
     if( window->IsMenu && ( ! fgStructure.MenuContext ) )
@@ -273,6 +274,29 @@ done_retry:
         visualInfo->visual, mask,
         &winAttr
     );
+
+    event_mask =
+        StructureNotifyMask | SubstructureNotifyMask | ExposureMask |
+        ButtonPressMask | ButtonReleaseMask | KeyPressMask | KeyReleaseMask |
+        VisibilityChangeMask | EnterWindowMask | LeaveWindowMask |
+        PointerMotionMask | ButtonMotionMask;
+
+    /* Create input context */
+    window->Window.pContext.IC = NULL;
+    if (fgDisplay.pDisplay.IM)
+    {
+        long im_event_mask;
+        window->Window.pContext.IC =
+            XCreateIC(fgDisplay.pDisplay.IM,
+                    XNInputStyle, fgDisplay.pDisplay.InputStyle,
+                    XNClientWindow, window->Window.Handle,
+                    XNFocusWindow, window->Window.Handle,
+                    NULL);
+        XGetICValues(window->Window.pContext.IC, XNFilterEvents, &im_event_mask, NULL);
+        event_mask |= im_event_mask;
+        XSetICFocus(window->Window.pContext.IC);
+    }
+    XSelectInput(fgDisplay.pDisplay.Display, window->Window.Handle, event_mask);
 
     /* Fake configure event to force viewport setup
      * even with no window manager.
@@ -479,6 +503,10 @@ void fgPlatformCloseWindow( SFG_Window* window )
         glXDestroyContext( fgDisplay.pDisplay.Display, window->Window.Context );
     window->Window.pContext.FBConfig = NULL;
 #endif
+
+    if (window->Window.pContext.IC) {
+        XDestroyIC(window->Window.pContext.IC);
+    }
 
     if( window->Window.Handle ) {
         XDestroyWindow( fgDisplay.pDisplay.Display, window->Window.Handle );

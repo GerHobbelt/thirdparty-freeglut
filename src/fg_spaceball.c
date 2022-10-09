@@ -31,6 +31,8 @@ void fgInitialiseSpaceball(void)
     }
 
     fgPlatformInitializeSpaceball();
+
+    fg_sball_initialized = 1;
 }
 
 void fgSpaceballClose(void)

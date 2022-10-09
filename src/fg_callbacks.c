@@ -30,6 +30,7 @@
 
 /* -- INTERFACE FUNCTIONS -------------------------------------------------- */
 
+
 /*
  * Global callbacks.
  */
@@ -74,7 +75,7 @@ void FGAPIENTRY glutTimerFuncUcall( unsigned int timeOut, FGCBTimerUC callback, 
             break;
     }
 
-    fgListInsert( &fgState.Timers, &node->Node, &timer->Node );
+    fgListInsert( &fgState.Timers, node ? &node->Node : 0, &timer->Node );
 }
 
 IMPLEMENT_CALLBACK_FUNC_CB_ARG1(Timer, Timer)
@@ -127,7 +128,9 @@ IMPLEMENT_GLUT_CALLBACK_FUNC_ARG0_2NAME(MenuDestroy, Destroy)
 /* Implement all these callback setter functions... */
 IMPLEMENT_CURRENT_WINDOW_CALLBACK_FUNC_ARG2(Position)
 IMPLEMENT_CURRENT_WINDOW_CALLBACK_FUNC_ARG3_USER(Keyboard,unsigned char,int,int)
+IMPLEMENT_CURRENT_WINDOW_CALLBACK_FUNC_ARG3_USER(KeyboardExt,int,int,int)
 IMPLEMENT_CURRENT_WINDOW_CALLBACK_FUNC_ARG3_USER(KeyboardUp,unsigned char,int,int)
+IMPLEMENT_CURRENT_WINDOW_CALLBACK_FUNC_ARG3_USER(KeyboardDown,unsigned char,int,int)
 IMPLEMENT_CURRENT_WINDOW_CALLBACK_FUNC_ARG3(Special)
 IMPLEMENT_CURRENT_WINDOW_CALLBACK_FUNC_ARG3(SpecialUp)
 IMPLEMENT_CURRENT_WINDOW_CALLBACK_FUNC_ARG4(Mouse)
@@ -151,6 +154,8 @@ IMPLEMENT_CURRENT_WINDOW_CALLBACK_FUNC_ARG3(MultiPassive)
 IMPLEMENT_CURRENT_WINDOW_CALLBACK_FUNC_ARG0(InitContext)
 IMPLEMENT_CURRENT_WINDOW_CALLBACK_FUNC_ARG1(AppStatus)
 
+
+
 /*
  * Sets the Display callback for the current window
  */
@@ -173,7 +178,7 @@ void fghDefaultReshape( int width, int height, FGCBUserData userData )
 void FGAPIENTRY glutReshapeFuncUcall( FGCBReshapeUC callback, FGCBUserData userData )
 {
     FREEGLUT_EXIT_IF_NOT_INITIALISED ( "glutReshapeFuncUcall" );
-    
+
     if( !callback )
     {
         callback = fghDefaultReshape;
@@ -208,7 +213,7 @@ static void fghVisibility( int status, FGCBUserData userData )
     freeglut_return_if_fail( fgStructure.CurrentWindow );
 
     /* Translate window status func states to visibility states */
-    if( ( status == GLUT_HIDDEN)  || ( status == GLUT_FULLY_COVERED) )
+    if( ( status == GLUT_HIDDEN) || ( status == GLUT_FULLY_COVERED) )
         vis_status = GLUT_NOT_VISIBLE;
     else    /* GLUT_FULLY_RETAINED, GLUT_PARTIALLY_RETAINED */
         vis_status = GLUT_VISIBLE;
@@ -247,15 +252,15 @@ void FGAPIENTRY glutJoystickFuncUcall( FGCBJoystickUC callback, int pollInterval
            fgStructure.CurrentWindow->State.JoystickPollRate <= 0 ||        /* Joystick callback was disabled */
            !FETCH_WCB(*fgStructure.CurrentWindow,Joystick)
          ) &&
-         ( 
+         (
            callback && ( pollInterval > 0 )                                 /* but is now enabled */
          ) )
         ++fgState.NumActiveJoysticks;
-    else if ( ( 
+    else if ( (
                 fgStructure.CurrentWindow->State.JoystickPollRate > 0 &&    /* Joystick callback was enabled */
                 FETCH_WCB(*fgStructure.CurrentWindow,Joystick)
-              ) &&  
-              ( 
+              ) &&
+              (
                 !callback || ( pollInterval <= 0 )                          /* but is now disabled */
               ) )
         --fgState.NumActiveJoysticks;

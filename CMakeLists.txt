@@ -139,13 +139,13 @@ IF(WIN32)
         src/mswin/fg_state_mswin.c
         src/mswin/fg_structure_mswin.c
         src/mswin/fg_window_mswin.c
-        ${CMAKE_BINARY_DIR}/freeglut.rc # generated below from freeglut.rc.in
+        ${CMAKE_CURRENT_BINARY_DIR}/freeglut.rc # generated below from freeglut.rc.in
     )
     IF (MSVC AND NOT CMAKE_CL_64)
         # .def file only for 32bit Windows builds (TODO: MSVC only right
         # now, needed for any other Windows platform?)
         LIST(APPEND FREEGLUT_SRCS
-            ${CMAKE_BINARY_DIR}/freeglutdll.def # generated below from src/freeglutdll.def.in
+            ${CMAKE_CURRENT_BINARY_DIR}/freeglutdll.def # generated below from src/freeglutdll.def.in
         )
     ENDIF()
 
@@ -264,7 +264,7 @@ IF(FREEGLUT_GLES)
     LIST(APPEND LIBS GLESv2 GLESv1_CM EGL)
 ELSE()
   FIND_PACKAGE(OpenGL REQUIRED)
-  LIST(APPEND LIBS ${OPENGL_gl_LIBRARY})
+  LIST(APPEND LIBS ${OPENGL_LIBRARIES})
   INCLUDE_DIRECTORIES(${OPENGL_INCLUDE_DIR})
 ENDIF()
 
@@ -386,24 +386,39 @@ ENDIF()
 # The generated config.h is placed in the project's build directory, just to
 # ensure that all CMake-generated files are kept away from the main source tree.
 # As a result, the build directory must to be added to the include path list.
-CONFIGURE_FILE(${CMAKE_CURRENT_SOURCE_DIR}/config.h.in ${CMAKE_BINARY_DIR}/config.h)
-INCLUDE_DIRECTORIES(BEFORE ${CMAKE_BINARY_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/include ${CMAKE_CURRENT_SOURCE_DIR}/src)
+CONFIGURE_FILE(${CMAKE_CURRENT_SOURCE_DIR}/config.h.in ${CMAKE_CURRENT_BINARY_DIR}/config.h)
 ADD_DEFINITIONS(-DHAVE_CONFIG_H)
 IF(WIN32)
     # we also have to generate freeglut.rc, which contains the version
     # number
-    CONFIGURE_FILE(${CMAKE_CURRENT_SOURCE_DIR}/freeglut.rc.in ${CMAKE_BINARY_DIR}/freeglut.rc)
+    CONFIGURE_FILE(${CMAKE_CURRENT_SOURCE_DIR}/freeglut.rc.in ${CMAKE_CURRENT_BINARY_DIR}/freeglut.rc)
     IF (MSVC AND NOT CMAKE_CL_64)
         # .def file only for 32bit Windows builds with Visual Studio
-        CONFIGURE_FILE(${CMAKE_CURRENT_SOURCE_DIR}/src/freeglutdll.def.in ${CMAKE_BINARY_DIR}/freeglutdll.def)
+        CONFIGURE_FILE(${CMAKE_CURRENT_SOURCE_DIR}/src/freeglutdll.def.in ${CMAKE_CURRENT_BINARY_DIR}/freeglutdll.def)
     ENDIF()
 ENDIF()
 
 IF(FREEGLUT_BUILD_SHARED_LIBS)
     ADD_LIBRARY(freeglut SHARED ${FREEGLUT_SRCS})
+    TARGET_INCLUDE_DIRECTORIES(freeglut
+        PRIVATE
+            "${CMAKE_CURRENT_BINARY_DIR}"
+            $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>
+        PUBLIC
+            $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+            $<INSTALL_INTERFACE:include>
+    )
 ENDIF()
 IF(FREEGLUT_BUILD_STATIC_LIBS)
     ADD_LIBRARY(freeglut_static STATIC ${FREEGLUT_SRCS})
+    TARGET_INCLUDE_DIRECTORIES(freeglut_static
+        PRIVATE
+            "${CMAKE_CURRENT_BINARY_DIR}"
+            $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>
+        PUBLIC
+            $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+            $<INSTALL_INTERFACE:include>
+    )
 ENDIF()
 
 
@@ -421,7 +436,12 @@ IF(WIN32)
     IF(FREEGLUT_BUILD_STATIC_LIBS)
         TARGET_COMPILE_DEFINITIONS(freeglut_static PUBLIC FREEGLUT_STATIC)
         IF(FREEGLUT_REPLACE_GLUT)
-            SET_TARGET_PROPERTIES(freeglut_static PROPERTIES OUTPUT_NAME ${LIBNAME})
+            # on MSVC static lib and import from shared lib have the same name
+            IF(MSVC AND FREEGLUT_BUILD_SHARED_LIBS)
+                SET_TARGET_PROPERTIES(freeglut_static PROPERTIES OUTPUT_NAME ${LIBNAME}_static)
+            ELSE()
+                SET_TARGET_PROPERTIES(freeglut_static PROPERTIES OUTPUT_NAME ${LIBNAME})
+            ENDIF()
         ENDIF()
         # need to set machine:x64 for linker, at least for VC10, and
         # doesn't hurt for older compilers:
@@ -526,7 +546,7 @@ INSTALL(FILES ${FREEGLUT_HEADERS} DESTINATION include/GL COMPONENT Devel)
 # Optionally build demos, on by default.
 option( FREEGLUT_BUILD_DEMOS "Build FreeGLUT demos." ON )
 
-SET(DEMO_LIBS ${OPENGL_glu_LIBRARY} ${LIBS})
+SET(DEMO_LIBS ${LIBS})
 # lib m for math, not needed on windows
 IF (NOT WIN32)
     LIST(APPEND DEMO_LIBS m)
@@ -567,14 +587,13 @@ ADD_DEMO(shapes          progs/demos/shapes/shapes.c
                          progs/demos/shapes/glmatrix.h
                          progs/demos/shapes/glmatrix.c)
 ADD_DEMO(smooth_opengl3  progs/demos/smooth_opengl3/smooth_opengl3.c)
-IF(UNIX)
-    ADD_DEMO(spaceball       progs/demos/spaceball/spaceball.c
-                             progs/demos/spaceball/vmath.c
-                             progs/demos/spaceball/vmath.h)
-ENDIF()
+ADD_DEMO(spaceball       progs/demos/spaceball/spaceball.c
+                         progs/demos/spaceball/vmath.c
+                         progs/demos/spaceball/vmath.h)
 ADD_DEMO(subwin          progs/demos/subwin/subwin.c)
 ADD_DEMO(timer           progs/demos/timer/timer.c)
 ADD_DEMO(timer_callback  progs/demos/timer_callback/timer.c)
+ADD_DEMO(keyboard        progs/demos/keyboard/keyboard.c)
 
 
 
@@ -613,8 +632,8 @@ ENDIF()
 IF(FREEGLUT_BUILD_STATIC_LIBS)
   LIST(APPEND PC_CFLAGS -DFREEGLUT_STATIC)
 ENDIF()
-CONFIGURE_FILE(${CMAKE_CURRENT_SOURCE_DIR}/freeglut.pc.in ${CMAKE_BINARY_DIR}/freeglut.pc @ONLY)
-INSTALL(FILES ${CMAKE_BINARY_DIR}/freeglut.pc DESTINATION ${CMAKE_INSTALL_LIBDIR}/pkgconfig/ RENAME ${PC_FILENAME} COMPONENT Devel)
+CONFIGURE_FILE(${CMAKE_CURRENT_SOURCE_DIR}/freeglut.pc.in ${CMAKE_CURRENT_BINARY_DIR}/freeglut.pc @ONLY)
+INSTALL(FILES ${CMAKE_CURRENT_BINARY_DIR}/freeglut.pc DESTINATION ${CMAKE_INSTALL_LIBDIR}/pkgconfig/ RENAME ${PC_FILENAME} COMPONENT Devel)
 # TODO: change the library and .pc name when building for GLES,
 # e.g. -lglut-GLES
 

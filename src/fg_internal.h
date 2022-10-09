@@ -130,6 +130,13 @@
 #    include <time.h>
 #endif
 
+#if defined(_MSC_VER)
+#ifndef _CRTDBG_MAP_ALLOC
+#define _CRTDBG_MAP_ALLOC
+#endif
+#include <crtdbg.h>
+#endif
+
 /* -- AUTOCONF HACKS --------------------------------------------------------*/
 
 /* XXX: Update autoconf to avoid these.
@@ -139,11 +146,16 @@
  */
 #if defined(__FreeBSD__) || defined(__NetBSD__)
 #    define HAVE_USB_JS 1
+#    if defined(__NetBSD__) || ( defined(__FreeBSD__) && __FreeBSD_version >= 500000)
+#        define HAVE_USBHID_H 1
+#    endif
 #endif
 
 #if defined(_MSC_VER) || defined(__WATCOMC__)
 /* strdup() is non-standard, for all but POSIX-2001 */
+#ifndef strdup
 #define strdup   _strdup
+#endif
 #endif
 
 /* M_PI is non-standard (defined by BSD, not ISO-C) */
@@ -236,6 +248,10 @@ typedef void (* FGCBKeyboard        )( unsigned char, int, int );
 typedef void (* FGCBKeyboardUC      )( unsigned char, int, int, FGCBUserData );
 typedef void (* FGCBKeyboardUp      )( unsigned char, int, int );
 typedef void (* FGCBKeyboardUpUC    )( unsigned char, int, int, FGCBUserData );
+typedef void (* FGCBKeyboardDown    )( unsigned char, int, int );
+typedef void (* FGCBKeyboardDownUC  )( unsigned char, int, int, FGCBUserData );
+typedef void (* FGCBKeyboardExt     )( int, int, int );
+typedef void (* FGCBKeyboardExtUC   )( int, int, int, FGCBUserData );
 typedef void (* FGCBSpecial         )( int, int, int );
 typedef void (* FGCBSpecialUC       )( int, int, int, FGCBUserData );
 typedef void (* FGCBSpecialUp       )( int, int, int );
@@ -668,9 +684,9 @@ do                                            \
     if( FETCH_WCB( window, cbname ) )         \
     {                                         \
         FGCB ## cbname ## UC func = (FGCB ## cbname ## UC)(FETCH_WCB( window, cbname )); \
-        FGCBUserData userData = FETCH_USER_DATA_WCB( window, cbname ); \
+        FGCBUserData __userData = FETCH_USER_DATA_WCB( window, cbname ); \
         fgSetWindow( &window );               \
-        func EXPAND_WCB( cbname )(( arg_list, userData )); \
+        func EXPAND_WCB( cbname )(( arg_list, __userData )); \
     }                                         \
 } while( 0 )
 
@@ -692,6 +708,8 @@ enum
     WCB_Reshape,
     WCB_Position,
     WCB_Keyboard,
+    WCB_KeyboardExt,
+    WCB_KeyboardDown,
     WCB_KeyboardUp,
     WCB_Special,
     WCB_SpecialUp,
@@ -1161,6 +1179,9 @@ void fgWarning( const char *fmt, ... );
 
 SFG_Proc fgPlatformGetProcAddress( const char *procName );
 
+void fgPlatformSetClipboard(int selection, const char *text);
+const char *fgPlatformGetClipboard(int selection);
+
 /* pushing attribute/value pairs into an array */
 #define ATTRIB(a) attributes[where++]=(a)
 #define ATTRIB_VAL(a,v) {ATTRIB(a); ATTRIB(v);}
@@ -1169,6 +1190,8 @@ int fghMapBit( int mask, int from, int to );
 int fghIsLegacyContextRequested( SFG_Window *win );
 void fghContextCreationError( void );
 int fghNumberOfAuxBuffersRequested( void );
+
+wchar_t* fghWstrFromStr(const char* str);
 
 #endif /* FREEGLUT_INTERNAL_H */
 

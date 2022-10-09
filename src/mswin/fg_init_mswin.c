@@ -36,6 +36,8 @@ extern LRESULT CALLBACK fgPlatformWindowProc( HWND hWnd, UINT uMsg,
 extern void fgPlatformInitSystemTime();
 extern void fghCloseInputDevices(void);
 
+char *fgClipboardBuffer[3] = { NULL, NULL, NULL };
+
 
 /*
  * A call to this function should initialize all the display stuff...
@@ -99,7 +101,7 @@ void fgPlatformInitialize( const char* displayName )
     /* If we have a DisplayName try to use it for metrics */
     if( fgDisplay.pDisplay.DisplayName )
     {
-        HDC context = CreateDC(fgDisplay.pDisplay.DisplayName,0,0,0);
+        HDC context = CreateDCA(fgDisplay.pDisplay.DisplayName,0,0,0);
         if( context )
         {
         fgDisplay.ScreenWidth  = GetDeviceCaps( context, HORZRES );
@@ -150,10 +152,18 @@ void fgPlatformDeinitialiseInputDevices ( void )
 
 void fgPlatformCloseDisplay ( void )
 {
+    int i;
+
     if( fgDisplay.pDisplay.DisplayName )
     {
         free( fgDisplay.pDisplay.DisplayName );
         fgDisplay.pDisplay.DisplayName = NULL;
+    }
+
+    for (i = 0; i < 3; ++i)
+    {
+        free(fgClipboardBuffer[i]);
+        fgClipboardBuffer[i] = NULL;
     }
 
     /* Reset the timer granularity */
@@ -169,7 +179,7 @@ void fgPlatformDestroyContext ( SFG_PlatformDisplay pDisplay, SFG_WindowContextT
 
 void (__cdecl *__glutExitFunc)( int return_value ) = NULL;
 
-void FGAPIENTRY __glutInitWithExit( int *pargc, char **argv, void (__cdecl *exit_function)(int) )
+void FGAPIENTRY __glutInitWithExit( int *pargc, const char **argv, void (__cdecl *exit_function)(int) )
 {
   __glutExitFunc = exit_function;
   glutInit(pargc, argv);

@@ -85,7 +85,7 @@ void fgPlatformCheckMenuDeactivate(HWND newFocusWnd)
             /* window that got focus was not one of the active menus. That means we'll
              * close the active menu's unless the window that got focus was their parent */
             menu = fgGetActiveMenu();
-
+            
             if (newFocusWnd != menu->ParentWindow->Window.Handle)
             {
                 /* focus shifted to another window than the menu's parent, close menus */

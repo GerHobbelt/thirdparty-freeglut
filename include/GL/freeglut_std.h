@@ -47,11 +47,7 @@
  * The default behavior depends on the compiler/platform.
  */
 #   ifndef FREEGLUT_LIB_PRAGMAS
-#       if ( defined(_MSC_VER) || defined(__WATCOMC__) ) && !defined(_WIN32_WCE)
-#           define FREEGLUT_LIB_PRAGMAS 1
-#       else
-#           define FREEGLUT_LIB_PRAGMAS 0
-#       endif
+#       define FREEGLUT_LIB_PRAGMAS 0
 #   endif
 
 #  ifndef WIN32_LEAN_AND_MEAN
@@ -120,7 +116,7 @@
  * The freeglut and GLUT API versions
  */
 #define  FREEGLUT             1
-#define  GLUT_API_VERSION     4
+#define  GLUT_API_VERSION     6
 #define  GLUT_XLIB_IMPLEMENTATION 13
 /* Deprecated:
    cf. http://sourceforge.net/mailarchive/forum.php?thread_name=CABcAi1hw7cr4xtigckaGXB5X8wddLfMcbA_rZ3NAuwMrX_zmsw%40mail.gmail.com&forum_name=freeglut-developer */
@@ -410,7 +406,7 @@
 /*
  * Initialization functions, see fglut_init.c
  */
-FGAPI void    FGAPIENTRY glutInit( int* pargc, char** argv );
+FGAPI void    FGAPIENTRY glutInit( int* pargc, const char** argv );
 FGAPI void    FGAPIENTRY glutInitWindowPosition( int x, int y );
 FGAPI void    FGAPIENTRY glutInitWindowSize( int width, int height );
 FGAPI void    FGAPIENTRY glutInitDisplayMode( unsigned int displayMode );
@@ -498,6 +494,7 @@ FGAPI void    FGAPIENTRY glutMotionFunc( void (* callback)( int, int ) );
 FGAPI void    FGAPIENTRY glutPassiveMotionFunc( void (* callback)( int, int ) );
 FGAPI void    FGAPIENTRY glutEntryFunc( void (* callback)( int ) );
 
+FGAPI void    FGAPIENTRY glutKeyboardDownFunc( void (* callback)( unsigned char, int, int ) );
 FGAPI void    FGAPIENTRY glutKeyboardUpFunc( void (* callback)( unsigned char, int, int ) );
 FGAPI void    FGAPIENTRY glutSpecialUpFunc( void (* callback)( int, int, int ) );
 FGAPI void    FGAPIENTRY glutJoystickFunc( void (* callback)( unsigned int, int, int, int ), int pollInterval );
@@ -625,7 +622,7 @@ FGAPI void    FGAPIENTRY glutReportErrors( void );
 #include <stdlib.h>
 
 #if defined(_WIN32) && !defined(GLUT_DISABLE_ATEXIT_HACK) && !defined(__WATCOMC__)
-FGAPI void FGAPIENTRY __glutInitWithExit(int *argcp, char **argv, void (__cdecl *exitfunc)(int));
+FGAPI void FGAPIENTRY __glutInitWithExit(int *argcp, const char **argv, void (__cdecl *exitfunc)(int));
 FGAPI int FGAPIENTRY __glutCreateWindowWithExit(const char *title, void (__cdecl *exitfunc)(int));
 FGAPI int FGAPIENTRY __glutCreateMenuWithExit(void (* func)(int), void (__cdecl *exitfunc)(int));
 #ifndef FREEGLUT_BUILDING_LIB
@@ -634,7 +631,7 @@ FGAPI int FGAPIENTRY __glutCreateMenuWithExit(void (* func)(int), void (__cdecl 
 #else
 #define FGUNUSED
 #endif
-static void FGAPIENTRY FGUNUSED glutInit_ATEXIT_HACK(int *argcp, char **argv) { __glutInitWithExit(argcp, argv, exit); }
+static void FGAPIENTRY FGUNUSED glutInit_ATEXIT_HACK(int *argcp, const char **argv) { __glutInitWithExit(argcp, argv, exit); }
 #define glutInit glutInit_ATEXIT_HACK
 static int FGAPIENTRY FGUNUSED glutCreateWindow_ATEXIT_HACK(const char *title) { return __glutCreateWindowWithExit(title, exit); }
 #define glutCreateWindow glutCreateWindow_ATEXIT_HACK

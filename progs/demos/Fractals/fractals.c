@@ -319,7 +319,7 @@ main(int argc, char *argv[])
   if ( argc > 1 )
     readConfigFile ( argv[1] ) ;
   else
-    readConfigFile ( "fractals.dat" ) ;
+    readConfigFile ( "demos/Fractals/fractals.dat" ) ;
 
   glutCreateWindow( window_title );
 

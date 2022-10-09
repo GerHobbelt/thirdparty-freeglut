@@ -28,6 +28,10 @@
 #include <GL/freeglut.h>
 #include "../fg_internal.h"
 
+#ifndef MAPVK_VK_TO_CHAR
+#define MAPVK_VK_TO_CHAR 2
+#endif
+
 extern void fghRedrawWindow ( SFG_Window *window );
 extern void fghRedrawWindowAndChildren ( SFG_Window *window );
 extern void fghOnReshapeNotify(SFG_Window *window, int width, int height, GLboolean forceNotify);
@@ -44,8 +48,8 @@ extern void fgPlatformCheckMenuDeactivate(HWND newFocusWnd);
 #ifdef WM_TOUCH
 typedef BOOL (WINAPI *pGetTouchInputInfo)(HTOUCHINPUT,UINT,PTOUCHINPUT,int);
 typedef BOOL (WINAPI *pCloseTouchInputHandle)(HTOUCHINPUT);
-static pGetTouchInputInfo fghGetTouchInputInfo = (pGetTouchInputInfo)0xDEADBEEF;
-static pCloseTouchInputHandle fghCloseTouchInputHandle = (pCloseTouchInputHandle)0xDEADBEEF;
+static pGetTouchInputInfo fghGetTouchInputInfo = (pGetTouchInputInfo)(intptr_t)0xDEADBEEF;
+static pCloseTouchInputHandle fghCloseTouchInputHandle = (pCloseTouchInputHandle)(intptr_t)0xDEADBEEF;
 #endif
 
 #ifdef _WIN32_WCE
@@ -63,7 +67,7 @@ struct GXKeyList gxKeyList;
 #endif /* _WIN32_WCE */
 
 #ifdef _DEBUG
-/*
+/* 
  * WM_ message to string, for debugging
  * This is taken from the 8.0 SDK, so Windows 8 API and everything earlier is included
  */
@@ -474,12 +478,87 @@ fg_time_t fgPlatformSystemTime ( void )
     /* Check if we just wrapped */
     if (currTime32 < lastTime32)
         timeEpoch++;
-
+    
     lastTime32 = currTime32;
 
     return currTime32 | timeEpoch << 32;
 }
 
+extern char *fgClipboardBuffer[3];
+
+void fgPlatformSetClipboard(int selection, const char *text)
+{
+	if (selection == GLUT_PRIMARY)
+	{
+		free(fgClipboardBuffer[GLUT_PRIMARY]);
+		fgClipboardBuffer[GLUT_PRIMARY] = strdup(text);
+	}
+	else if (selection == GLUT_SECONDARY)
+	{
+		free(fgClipboardBuffer[GLUT_SECONDARY]);
+		fgClipboardBuffer[GLUT_SECONDARY] = strdup(text);
+	}
+	else if (selection == GLUT_CLIPBOARD && text)
+	{
+		int n = MultiByteToWideChar(CP_UTF8, 0, text, -1, NULL, 0);
+		if (n > 0)
+		{
+			HANDLE object = GlobalAlloc(0, n * sizeof(WCHAR));
+			if (object)
+			{
+				WCHAR *wtext = GlobalLock(object);
+				if (wtext)
+				{
+					MultiByteToWideChar(CP_UTF8, 0, text, -1, wtext, n);
+					GlobalUnlock(object);
+					if (OpenClipboard(NULL))
+					{
+						EmptyClipboard();
+						SetClipboardData(CF_UNICODETEXT, object);
+						CloseClipboard();
+						object = NULL; /* it is now owned by the system */
+					}
+				}
+				GlobalFree(object);
+			}
+		}
+	}
+}
+
+const char *fgPlatformGetClipboard(int selection)
+{
+	if (selection == GLUT_PRIMARY)
+		return fgClipboardBuffer[GLUT_PRIMARY];
+	if (selection == GLUT_SECONDARY)
+		return fgClipboardBuffer[GLUT_SECONDARY];
+	if (selection == GLUT_CLIPBOARD)
+	{
+		free(fgClipboardBuffer[GLUT_CLIPBOARD]);
+		fgClipboardBuffer[GLUT_CLIPBOARD] = NULL;
+		if (OpenClipboard(NULL))
+		{
+			HANDLE object = GetClipboardData(CF_UNICODETEXT);
+			if (object)
+			{
+				WCHAR *wtext = GlobalLock(object);
+				if (wtext)
+				{
+					int n = WideCharToMultiByte(CP_UTF8, 0, wtext, -1, NULL, 0, NULL, NULL);
+					if (n > 0)
+					{
+						char *text = malloc(n);
+						fgClipboardBuffer[GLUT_CLIPBOARD] = text;
+						WideCharToMultiByte(CP_UTF8, 0, wtext, -1, text, n, NULL, NULL);
+					}
+					GlobalUnlock(object);
+				}
+			}
+			CloseClipboard();
+		}
+		return fgClipboardBuffer[GLUT_CLIPBOARD];
+	}
+	return NULL;
+}
 
 void fgPlatformSleepForEvents( fg_time_t msec )
 {
@@ -529,10 +608,10 @@ static void fghPlatformOnWindowStatusNotify(SFG_Window *window, GLboolean visSta
         {
             if (visState)
                 /* visible, set window title */
-                SetWindowText( window->Window.Handle, window->State.pWState.WindowTitle );
+                SetWindowTextA( window->Window.Handle, window->State.pWState.WindowTitle );
             else
                 /* not visible, set icon title */
-                SetWindowText( window->Window.Handle, window->State.pWState.IconTitle );
+                SetWindowTextA( window->Window.Handle, window->State.pWState.IconTitle );
         }
 
         notify = GL_TRUE;
@@ -542,7 +621,7 @@ static void fghPlatformOnWindowStatusNotify(SFG_Window *window, GLboolean visSta
     {
         SFG_Window *saved_window = fgStructure.CurrentWindow;
 
-        /* On win32 we only have two states, window displayed and window not displayed (iconified)
+        /* On win32 we only have two states, window displayed and window not displayed (iconified) 
          * We map these to GLUT_FULLY_RETAINED and GLUT_HIDDEN respectively.
          */
         INVOKE_WCB( *window, WindowStatus, ( visState ? GLUT_FULLY_RETAINED:GLUT_HIDDEN ) );
@@ -575,7 +654,9 @@ static int fgPlatformGetModifiers (void)
         ( ( ( GetKeyState( VK_LCONTROL ) < 0 ) ||
             ( GetKeyState( VK_RCONTROL ) < 0 )) ? GLUT_ACTIVE_CTRL  : 0 ) |
         ( ( ( GetKeyState( VK_LMENU    ) < 0 ) ||
-            ( GetKeyState( VK_RMENU    ) < 0 )) ? GLUT_ACTIVE_ALT   : 0 );
+            ( GetKeyState( VK_RMENU    ) < 0 )) ? GLUT_ACTIVE_ALT   : 0 ) |
+		( ( ( GetKeyState( VK_LWIN     ) < 0 ) ||
+            ( GetKeyState( VK_RWIN     ) < 0 )) ? GLUT_ACTIVE_SUPER : 0 );
 }
 
 /* Check whether a button (VK_*BUTTON) is currently depressed. Returns
@@ -592,7 +673,7 @@ static LRESULT fghWindowProcKeyPress(SFG_Window *window, UINT uMsg, GLboolean ke
                          rControl = 0, rShift = 0, rAlt = 0;
 
     int keypress = -1;
-
+    
     /* if keydown, check for repeat */
     /* If repeat is globally switched off, it cannot be switched back on per window.
      * But if it is globally switched on, it can be switched off per window. This matches
@@ -601,7 +682,7 @@ static LRESULT fghWindowProcKeyPress(SFG_Window *window, UINT uMsg, GLboolean ke
      */
     if( keydown && ( fgState.KeyRepeat==GLUT_KEY_REPEAT_OFF || window->State.IgnoreKeyRepeat==GL_TRUE ) && (HIWORD(lParam) & KF_REPEAT) )
         return 1;
-
+    
     /* Remember the current modifiers state so user can query it from their callback */
     fgState.Modifiers = fgPlatformGetModifiers( );
 
@@ -631,6 +712,8 @@ static LRESULT fghWindowProcKeyPress(SFG_Window *window, UINT uMsg, GLboolean ke
         FG_KEY( VK_RIGHT,  GLUT_KEY_RIGHT     );
         FG_KEY( VK_DOWN,   GLUT_KEY_DOWN      );
         FG_KEY( VK_INSERT, GLUT_KEY_INSERT    );
+		FG_KEY( VK_LWIN,   GLUT_KEY_SUPER_L   );
+		FG_KEY( VK_RWIN,   GLUT_KEY_SUPER_R   );
 
     /* handle control, alt and shift. For GLUT, we want to distinguish between left and right presses.
      * The VK_L* & VK_R* left and right Alt, Ctrl and Shift virtual keys are however only used as parameters to GetAsyncKeyState() and GetKeyState()
@@ -664,9 +747,17 @@ static LRESULT fghWindowProcKeyPress(SFG_Window *window, UINT uMsg, GLboolean ke
     case VK_DELETE:
         /* The delete key should be treated as an ASCII keypress: */
         if (keydown)
+        {
+            INVOKE_WCB( *window, KeyboardDown,
+                        ( 127, window->State.MouseX, window->State.MouseY )
+            );
+            INVOKE_WCB( *window, KeyboardExt,
+                        ( 127, window->State.MouseX, window->State.MouseY )
+            );
             INVOKE_WCB( *window, Keyboard,
                         ( 127, window->State.MouseX, window->State.MouseY )
             );
+        }
         else
             INVOKE_WCB( *window, KeyboardUp,
                         ( 127, window->State.MouseX, window->State.MouseY )
@@ -715,7 +806,7 @@ static LRESULT fghWindowProcKeyPress(SFG_Window *window, UINT uMsg, GLboolean ke
             keypress = GLUT_KEY_F4;
     }
 #endif
-
+    
     if( keypress != -1 )
         if (keydown)
             INVOKE_WCB( *window, Special,
@@ -756,7 +847,7 @@ SFG_Window* fghWindowUnderCursor(SFG_Window *window)
         mouse_pos.x = GET_X_LPARAM(mouse_pos_dw);
         mouse_pos.y = GET_Y_LPARAM(mouse_pos_dw);
         ScreenToClient( window->Window.Handle, &mouse_pos );
-
+        
         hwnd = ChildWindowFromPoint(window->Window.Handle, mouse_pos);
         if (hwnd && hwnd!=window->Window.Handle)   /* can be NULL if mouse outside parent by the time we get here, or can be same as parent if we didn't find a child */
         {
@@ -874,7 +965,7 @@ LRESULT CALLBACK fgPlatformWindowProc( HWND hWnd, UINT uMsg, WPARAM wParam, LPAR
         /* Update visibility state of the window */
         if (wParam==SIZE_MINIMIZED)
             fghPlatformOnWindowStatusNotify(window,GL_FALSE,GL_FALSE);
-        else if ((wParam==SIZE_RESTORED || wParam == SIZE_MAXIMIZED) && !window->State.Visible)
+        else if (wParam==SIZE_RESTORED && !window->State.Visible)
             fghPlatformOnWindowStatusNotify(window,GL_TRUE,GL_FALSE);
 
         /* Check window visible, we don't want do anything when we get a WM_SIZE because the user or glutIconifyWindow minimized the window */
@@ -888,7 +979,7 @@ LRESULT CALLBACK fgPlatformWindowProc( HWND hWnd, UINT uMsg, WPARAM wParam, LPAR
             width  = LOWORD(lParam);
             height = HIWORD(lParam);
 #endif /* defined(_WIN32_WCE) */
-
+            
             /* Update state and call callback, if there was a change */
             fghOnReshapeNotify(window, width, height, GL_FALSE);
         }
@@ -935,15 +1026,15 @@ LRESULT CALLBACK fgPlatformWindowProc( HWND hWnd, UINT uMsg, WPARAM wParam, LPAR
             if (!IsIconic(window->Window.Handle))
             {
                 RECT windowRect;
-
+                
                 /* lParam contains coordinates of top-left of client area.
                  * Get top-left of non-client area of window, matching coordinates of
-                 * glutInitPosition and glutPositionWindow, but not those of
+                 * glutInitPosition and glutPositionWindow, but not those of 
                  * glutGet(GLUT_WINDOW_X) and glutGet(GLUT_WINDOW_Y), which return
                  * top-left of client area.
                  */
                 GetWindowRect( window->Window.Handle, &windowRect );
-
+            
                 if (window->Parent)
                 {
                     /* For child window, we should return relative to upper-left
@@ -1023,6 +1114,7 @@ LRESULT CALLBACK fgPlatformWindowProc( HWND hWnd, UINT uMsg, WPARAM wParam, LPAR
         break;
 #endif
 
+#if _MSC_VER > 1400
     case WM_SETCURSOR:
 /*      printf ( "Cursor event %x %x %x %x\n", window, window->State.Cursor, lParam, wParam ) ; */
         if( LOWORD( lParam ) == HTCLIENT )
@@ -1031,7 +1123,7 @@ LRESULT CALLBACK fgPlatformWindowProc( HWND hWnd, UINT uMsg, WPARAM wParam, LPAR
             {
                 TRACKMOUSEEVENT tme;
 
-                /* Cursor just entered window, set cursor look */
+                /* Cursor just entered window, set cursor look */ 
                 fgSetCursor ( window, window->State.Cursor ) ;
 
                 /* If an EntryFunc callback is specified by the user, also
@@ -1057,6 +1149,7 @@ LRESULT CALLBACK fgPlatformWindowProc( HWND hWnd, UINT uMsg, WPARAM wParam, LPAR
             /* Only pass non-client WM_SETCURSOR to DefWindowProc, or we get WM_SETCURSOR on parents of children as well */
             lRet = DefWindowProc( hWnd, uMsg, wParam, lParam );
         break;
+#endif
 
     case WM_MOUSELEAVE:
         {
@@ -1090,7 +1183,7 @@ LRESULT CALLBACK fgPlatformWindowProc( HWND hWnd, UINT uMsg, WPARAM wParam, LPAR
     case WM_PAINT:
     {
         RECT rect;
-
+        
         /* As per docs, upon receiving WM_PAINT, first check if the update region is not empty before you call BeginPaint */
         if (GetUpdateRect(hWnd,&rect,FALSE))
         {
@@ -1279,7 +1372,7 @@ LRESULT CALLBACK fgPlatformWindowProc( HWND hWnd, UINT uMsg, WPARAM wParam, LPAR
     {
         int wheel_number = 0;   /* Only one scroll wheel on windows */
 #if defined(_WIN32_WCE)
-        int modkeys = LOWORD(wParam);
+        int modkeys = LOWORD(wParam); 
         short ticks = (short)HIWORD(wParam);
         /* commented out as should not be needed here, mouse motion is processed in WM_MOUSEMOVE first:
         xPos = LOWORD(lParam);  -- straight from docs, not consistent with mouse nutton and mouse motion above (which i think is wrong)
@@ -1296,10 +1389,10 @@ LRESULT CALLBACK fgPlatformWindowProc( HWND hWnd, UINT uMsg, WPARAM wParam, LPAR
 
         window = fghWindowUnderCursor(window);
 
-        fgState.MouseWheelTicks += ticks;
+		fgState.MouseWheelTicks += ticks;
         if ( abs ( fgState.MouseWheelTicks ) >= WHEEL_DELTA )
-        {
-            int direction = ( fgState.MouseWheelTicks > 0 ) ? 1 : -1;
+		{
+			int direction = ( fgState.MouseWheelTicks > 0 ) ? 1 : -1;
 
             if( ! FETCH_WCB( *window, MouseWheel ) &&
                 ! FETCH_WCB( *window, Mouse ) )
@@ -1309,7 +1402,7 @@ LRESULT CALLBACK fgPlatformWindowProc( HWND hWnd, UINT uMsg, WPARAM wParam, LPAR
             fgState.Modifiers = fgPlatformGetModifiers( );
 
             while( abs ( fgState.MouseWheelTicks ) >= WHEEL_DELTA )
-            {
+			{
                 if( FETCH_WCB( *window, MouseWheel ) )
                     INVOKE_WCB( *window, MouseWheel,
                                 ( wheel_number,
@@ -1319,7 +1412,7 @@ LRESULT CALLBACK fgPlatformWindowProc( HWND hWnd, UINT uMsg, WPARAM wParam, LPAR
                                 )
                     );
                 else  /* No mouse wheel, call the mouse button callback twice */
-                {
+				{
                     /*
                      * Map wheel zero to button 3 and 4; +1 to 3, -1 to 4
                      *  "    "   one                     +1 to 5, -1 to 6, ...
@@ -1338,13 +1431,13 @@ LRESULT CALLBACK fgPlatformWindowProc( HWND hWnd, UINT uMsg, WPARAM wParam, LPAR
                                 ( button, GLUT_UP,
                                   window->State.MouseX, window->State.MouseY )
                     );
-                }
+				}
 
-                fgState.MouseWheelTicks -= WHEEL_DELTA * direction;
-            }
+				fgState.MouseWheelTicks -= WHEEL_DELTA * direction;
+			}
 
             fgState.Modifiers = INVALID_MODIFIERS;
-        }
+		}
         /* Per docs, should return zero */
         lRet = 0;
     }
@@ -1505,9 +1598,9 @@ LRESULT CALLBACK fgPlatformWindowProc( HWND hWnd, UINT uMsg, WPARAM wParam, LPAR
         unsigned int i = 0;
         TOUCHINPUT* ti = (TOUCHINPUT*)malloc( sizeof(TOUCHINPUT)*numInputs);
 
-        if (fghGetTouchInputInfo == (pGetTouchInputInfo)0xDEADBEEF) {
-            fghGetTouchInputInfo = (pGetTouchInputInfo)GetProcAddress(GetModuleHandle("user32"),"GetTouchInputInfo");
-            fghCloseTouchInputHandle = (pCloseTouchInputHandle)GetProcAddress(GetModuleHandle("user32"),"CloseTouchInputHandle");
+        if (fghGetTouchInputInfo == (pGetTouchInputInfo)(intptr_t)0xDEADBEEF) {
+		    fghGetTouchInputInfo = (pGetTouchInputInfo)GetProcAddress(GetModuleHandle(_T("user32")),"GetTouchInputInfo");
+		    fghCloseTouchInputHandle = (pCloseTouchInputHandle)GetProcAddress(GetModuleHandle(_T("user32")),"CloseTouchInputHandle");
         }
 
         if (!fghGetTouchInputInfo) {
@@ -1685,7 +1778,7 @@ void fgPlatformPosResZordWork(SFG_Window* window, unsigned int workMask)
         if (workMask & GLUT_POSITION_WORK)
         {
             flags &= ~SWP_NOMOVE;
-
+                
             /* Move rect so that top-left is at requested position */
             /* This also automatically makes sure that child window requested coordinates are relative
                 * to top-left of parent's client area (needed input for SetWindowPos on child windows),
@@ -1696,7 +1789,7 @@ void fgPlatformPosResZordWork(SFG_Window* window, unsigned int workMask)
         if (workMask & GLUT_SIZE_WORK)
         {
             flags &= ~SWP_NOSIZE;
-
+                
             /* Note on maximizing behavior of Windows: the resize borders are off
                 * the screen such that the client area extends all the way from the
                 * leftmost corner to the rightmost corner to maximize screen real
@@ -1731,7 +1824,7 @@ void fgPlatformPosResZordWork(SFG_Window* window, unsigned int workMask)
     if (!window->Parent)
         /* get the window rect from this to feed to SetWindowPos, correct for window decorations */
         fghComputeWindowRectFromClientArea_QueryWindow(&clientRect,window,TRUE);
-
+    
     /* Do the requested positioning, moving, and z order push/pop. */
     SetWindowPos( window->Window.Handle,
                     insertAfter,
