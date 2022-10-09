@@ -139,6 +139,7 @@ IF(WIN32)
         src/mswin/fg_state_mswin.c
         src/mswin/fg_structure_mswin.c
         src/mswin/fg_window_mswin.c
+        src/mswin/fg_cmap_mswin.c
         ${CMAKE_CURRENT_BINARY_DIR}/freeglut.rc # generated below from freeglut.rc.in
     )
     IF (MSVC AND NOT CMAKE_CL_64)
@@ -223,6 +224,7 @@ ELSE()
             src/x11/fg_structure_x11.c
             src/x11/fg_window_x11.c
             src/x11/fg_xinput_x11.c
+	    src/x11/fg_cmap_x11.c
         )
         IF(NOT(FREEGLUT_GLES))
             LIST(APPEND FREEGLUT_SRCS
@@ -273,6 +275,13 @@ IF(UNIX AND NOT(ANDROID OR BLACKBERRY OR FREEGLUT_WAYLAND))
         LIST(APPEND LIBS ${X11_Xinput_LIB})
     ELSE()
         MESSAGE(FATAL_ERROR "Missing X11's XInput2.h (X11/extensions/XInput2.h)")
+    ENDIF()
+ENDIF()
+
+# FreeBSD and NetBSD joystick code uses libusbhid
+IF(CMAKE_SYSTEM_NAME STREQUAL FreeBSD OR CMAKE_SYSTEM_NAME STREQUAL NetBSD)
+    IF(HAVE_USBHID_H)
+        LIST(APPEND LIBS "-lusbhid")
     ENDIF()
 ENDIF()
 
@@ -529,7 +538,8 @@ IF(FREEGLUT_BUILD_SHARED_LIBS)
             INCLUDES DESTINATION include
     )
     IF(INSTALL_PDB)
-        IF(CMAKE_GENERATOR MATCHES "^Visual Studio")
+        IF(CMAKE_GENERATOR MATCHES "^Visual Studio" OR
+           CMAKE_GENERATOR MATCHES "Ninja Multi-Config")
             INSTALL(FILES ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/Debug/freeglut${CMAKE_DEBUG_POSTFIX}.pdb
                 DESTINATION bin
                 CONFIGURATIONS Debug
@@ -601,10 +611,13 @@ ADD_DEMO(smooth_opengl3  progs/demos/smooth_opengl3/smooth_opengl3.c)
 ADD_DEMO(spaceball       progs/demos/spaceball/spaceball.c
                          progs/demos/spaceball/vmath.c
                          progs/demos/spaceball/vmath.h)
+ADD_DEMO(joystick        progs/demos/joystick/joystick.c)
 ADD_DEMO(subwin          progs/demos/subwin/subwin.c)
 ADD_DEMO(timer           progs/demos/timer/timer.c)
 ADD_DEMO(timer_callback  progs/demos/timer_callback/timer.c)
 ADD_DEMO(keyboard        progs/demos/keyboard/keyboard.c)
+ADD_DEMO(indexed_color   progs/demos/indexed_color/idxcol.c)
+ADD_DEMO(3dview          progs/demos/3dview/3dview.c)
 
 
 

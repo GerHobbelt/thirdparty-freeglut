@@ -309,7 +309,7 @@ SFG_Joystick *fgJoystick [ MAX_NUM_JOYSTICKS ];
 /*
  * Read the raw joystick data
  */
-static void fghJoystickRawRead( SFG_Joystick* joy, int* buttons, float* axes )
+void fgJoystickRawRead( SFG_Joystick* joy, int* buttons, float* axes )
 {
     int i;
 
@@ -384,7 +384,7 @@ static void fghJoystickRead( SFG_Joystick* joy, int* buttons, float* axes )
                 axes[ i ] = 0.0f;
     }
 
-    fghJoystickRawRead( joy, buttons, raw_axes );
+    fgJoystickRawRead( joy, buttons, raw_axes );
 
     if( axes )
         for( i=0; i<joy->num_axes; i++ )

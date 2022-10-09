@@ -33,10 +33,10 @@
 #ifdef EGL_VERSION_1_0
 #include "egl/fg_internal_egl.h"
 #else
-#include <GL/glx.h>
 #include "x11/fg_internal_x11_glx.h"
 #endif
 #include <X11/Xlib.h>
+#include <X11/Xutil.h>
 #include <X11/Xatom.h>
 #include <X11/keysym.h>
 #include <X11/extensions/XInput.h>
@@ -98,17 +98,23 @@ struct tagSFG_PlatformDisplay
  * much conditionally-compiled code later in the library.
  */
 #ifndef EGL_VERSION_1_0
-typedef Window     SFG_WindowHandleType ;
-typedef GLXContext SFG_WindowContextType ;
+typedef Window     SFG_WindowHandleType;
+typedef GLXContext SFG_WindowContextType;
+typedef Colormap SFG_WindowColormapType;
 #endif
+
 typedef struct tagSFG_PlatformContext SFG_PlatformContext;
 struct tagSFG_PlatformContext
 {
 #ifdef EGL_VERSION_1_0
     struct tagSFG_PlatformContextEGL egl;
 #else
+#ifdef USE_FBCONFIG
     GLXFBConfig    FBConfig;        /* The window's FBConfig               */
-#endif
+#else
+	XVisualInfo *visinf;			/* for older GLX keep the visual info */
+#endif	/* !def GLX_VERSION_1_3 */
+#endif	/* !def EGL_VERSION_1_0 */
     XIC IC;                         /* The window's input context          */
 };
 
@@ -121,7 +127,6 @@ struct tagSFG_PlatformWindowState
     int             OldHeight;          /*   "    height  "    "    "   "    */
     GLboolean       KeyRepeating;       /* Currently in repeat mode?         */    
 };
-
 
 /* -- JOYSTICK-SPECIFIC STRUCTURES AND TYPES ------------------------------- */
 /*
@@ -224,18 +229,18 @@ struct tagSFG_PlatformJoystick
 
 /* -- PRIVATE FUNCTION DECLARATIONS ---------------------------------------- */
 /* spaceball device functions, defined in fg_spaceball.c */
-int             fgIsSpaceballXEvent( const XEvent *ev );
-void            fgSpaceballHandleXEvent( const XEvent *ev );
+int fgIsSpaceballXEvent(const XEvent *ev);
+void fgSpaceballHandleXEvent(const XEvent *ev);
 
 /*
  * Check if "hint" is present in "property" for "window".  See fg_init.c
  */
-int             fgHintPresent(Window window, Atom property, Atom hint);
+int fgHintPresent(Window window, Atom property, Atom hint);
 
 /* Handler for X extension Events */
 #ifdef HAVE_X11_EXTENSIONS_XINPUT2_H
-  void          fgHandleExtensionEvents( XEvent * ev );
-  void          fgRegisterDevices( Display* dpy, Window* win );
+void fgHandleExtensionEvents(XEvent *ev);
+void fgRegisterDevices(Display *dpy, Window win);
 #endif
 
 
