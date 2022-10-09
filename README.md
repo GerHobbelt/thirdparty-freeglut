@@ -1,6 +1,10 @@
 FreeGLUT
 ========
 
+![GNU/Linux (X11) build status](https://github.com/FreeGLUTProject/freeglut/actions/workflows/build_gnulinux_x11.yml/badge.svg)
+![Windows build status](https://github.com/FreeGLUTProject/freeglut/actions/workflows/build_win_msvc.yml/badge.svg)
+
+
 This readme file applies to the git clone of FreeGLUT's svn repo on [sourceforge.net](http://freeglut.sourceforge.net/) that is hosted on [github](https://github.com/dcnieho/FreeGLUT). This is provided here to enable user to contribute easier.
 
 Every effort is made to ensure that the ``git_master`` branch only progresses in a fastforward manner, but complete guarantees cannot be given as the [sourceforge.net trunk](https://sourceforge.net/p/freeglut/code/HEAD/tree/) is at all times leading.
@@ -43,7 +47,6 @@ PORTS
 Currently supported platforms:
  - UNIX systems with X11 and Wayland (such as GNU/Linux, FreeBSD, etc)
  - MS Windows
- - MacOS X with XQuartz (no native Cocoa support yet)
  - Android (NDK)
  - BlackBerry
 
