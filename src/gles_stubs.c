@@ -4,6 +4,8 @@
 #include <GL/freeglut.h>
 #include "fg_internal.h"
 
+#if 0
+
 void fgDeactivateMenu( SFG_Window *window ) {
   fprintf(stderr, "fgDeactivateMenu: STUB\n");
 }
@@ -50,3 +52,5 @@ int     glutBitmapHeight( void* font ) { return 0; }
 GLfloat glutStrokeHeight( void* font ) { return 0; }
 void    glutBitmapString( void* font, const unsigned char *string ) {}
 void    glutStrokeString( void* font, const unsigned char *string ) {}
+
+#endif

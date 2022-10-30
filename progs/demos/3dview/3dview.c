@@ -37,23 +37,23 @@ static const char *helptext[] = {
 	0
 };
 
-void idle(void);
-void display(void);
-void print_help(void);
-void reshape(int x, int y);
-void keypress(unsigned char key, int x, int y);
-void skeypress(int key, int x, int y);
-void mouse(int bn, int st, int x, int y);
-void motion(int x, int y);
+static void idle(void);
+static void display(void);
+static void print_help(void);
+static void reshape(int x, int y);
+static void keypress(unsigned char key, int x, int y);
+static void skeypress(int key, int x, int y);
+static void mouse(int bn, int st, int x, int y);
+static void motion(int x, int y);
 
-int win_width, win_height;
-float cam_theta, cam_phi = 25, cam_dist = 8;
-float cam_pan[3];
-int mouse_x, mouse_y;
-int bnstate[8];
-int anim, help;
-long anim_start;
-long nframes;
+static int win_width, win_height;
+static float cam_theta, cam_phi = 25, cam_dist = 8;
+static float cam_pan[3];
+static int mouse_x, mouse_y;
+static int bnstate[8];
+static int anim, help;
+static long anim_start;
+static long nframes;
 
 #ifndef GL_FRAMEBUFFER_SRGB
 #define GL_FRAMEBUFFER_SRGB	0x8db9
@@ -63,7 +63,12 @@ long nframes;
 #define GL_MULTISAMPLE 0x809d
 #endif
 
-int main(int argc, char **argv)
+
+#if defined(BUILD_MONOLITHIC)
+#define main      fg_3dvview_demo_main
+#endif
+
+int main(int argc, const char **argv)
 {
 	glutInit(&argc, argv);
 	glutInitWindowSize(800, 600);
@@ -86,12 +91,12 @@ int main(int argc, char **argv)
 	return 0;
 }
 
-void idle(void)
+static void idle(void)
 {
 	glutPostRedisplay();
 }
 
-void display(void)
+static void display(void)
 {
 	long tm;
 	float lpos[] = {-1, 2, 3, 0};
@@ -150,7 +155,7 @@ void display(void)
 	nframes++;
 }
 
-void print_help(void)
+static void print_help(void)
 {
 	int i;
 	const char *s, **text;
@@ -190,7 +195,7 @@ void print_help(void)
 }
 
 #define ZNEAR	0.5f
-void reshape(int x, int y)
+static void reshape(int x, int y)
 {
 	float vsz, aspect = (float)x / (float)y;
 	win_width = x;
@@ -204,7 +209,7 @@ void reshape(int x, int y)
 	glFrustum(-aspect * vsz, aspect * vsz, -vsz, vsz, 0.5, 500.0);
 }
 
-void keypress(unsigned char key, int x, int y)
+static void keypress(unsigned char key, int x, int y)
 {
 	static int fullscr;
 	static int prev_xsz, prev_ysz;
@@ -248,7 +253,7 @@ void keypress(unsigned char key, int x, int y)
 	}
 }
 
-void skeypress(int key, int x, int y)
+static void skeypress(int key, int x, int y)
 {
 	switch(key) {
 	case GLUT_KEY_F1:
@@ -260,7 +265,7 @@ void skeypress(int key, int x, int y)
 	}
 }
 
-void mouse(int bn, int st, int x, int y)
+static void mouse(int bn, int st, int x, int y)
 {
 	int bidx = bn - GLUT_LEFT_BUTTON;
 	bnstate[bidx] = st == GLUT_DOWN;
@@ -268,7 +273,7 @@ void mouse(int bn, int st, int x, int y)
 	mouse_y = y;
 }
 
-void motion(int x, int y)
+static void motion(int x, int y)
 {
 	int dx = x - mouse_x;
 	int dy = y - mouse_y;

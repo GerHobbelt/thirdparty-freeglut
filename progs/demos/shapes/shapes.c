@@ -54,7 +54,7 @@
 #endif
 
 /* report GL errors, if any, to stderr */
-void checkError(const char *functionName)
+static void checkError(const char *functionName)
 {
     GLenum error;
     while (( error = glGetError() ) != GL_NO_ERROR) {
@@ -112,23 +112,23 @@ typedef void (APIENTRY *PFNGLUNIFORMMATRIX4FVPROC) (GLint location, GLsizei coun
 typedef void (APIENTRY *PFNGLUNIFORMMATRIX3FVPROC) (GLint location, GLsizei count, GLboolean transpose, const GLfloat *value);
 #endif
 
-PFNGLCREATESHADERPROC gl_CreateShader;
-PFNGLSHADERSOURCEPROC gl_ShaderSource;
-PFNGLCOMPILESHADERPROC gl_CompileShader;
-PFNGLCREATEPROGRAMPROC gl_CreateProgram;
-PFNGLATTACHSHADERPROC gl_AttachShader;
-PFNGLLINKPROGRAMPROC gl_LinkProgram;
-PFNGLUSEPROGRAMPROC gl_UseProgram;
-PFNGLGETSHADERIVPROC gl_GetShaderiv;
-PFNGLGETSHADERINFOLOGPROC gl_GetShaderInfoLog;
-PFNGLGETPROGRAMIVPROC gl_GetProgramiv;
-PFNGLGETPROGRAMINFOLOGPROC gl_GetProgramInfoLog;
-PFNGLGETATTRIBLOCATIONPROC gl_GetAttribLocation;
-PFNGLGETUNIFORMLOCATIONPROC gl_GetUniformLocation;
-PFNGLUNIFORMMATRIX4FVPROC gl_UniformMatrix4fv;
-PFNGLUNIFORMMATRIX3FVPROC gl_UniformMatrix3fv;
+static PFNGLCREATESHADERPROC gl_CreateShader;
+static PFNGLSHADERSOURCEPROC gl_ShaderSource;
+static PFNGLCOMPILESHADERPROC gl_CompileShader;
+static PFNGLCREATEPROGRAMPROC gl_CreateProgram;
+static PFNGLATTACHSHADERPROC gl_AttachShader;
+static PFNGLLINKPROGRAMPROC gl_LinkProgram;
+static PFNGLUSEPROGRAMPROC gl_UseProgram;
+static PFNGLGETSHADERIVPROC gl_GetShaderiv;
+static PFNGLGETSHADERINFOLOGPROC gl_GetShaderInfoLog;
+static PFNGLGETPROGRAMIVPROC gl_GetProgramiv;
+static PFNGLGETPROGRAMINFOLOGPROC gl_GetProgramInfoLog;
+static PFNGLGETATTRIBLOCATIONPROC gl_GetAttribLocation;
+static PFNGLGETUNIFORMLOCATIONPROC gl_GetUniformLocation;
+static PFNGLUNIFORMMATRIX4FVPROC gl_UniformMatrix4fv;
+static PFNGLUNIFORMMATRIX3FVPROC gl_UniformMatrix3fv;
 
-void initExtensionEntries(void)
+static void initExtensionEntries(void)
 {
     gl_CreateShader = (PFNGLCREATESHADERPROC) glutGetProcAddress ("glCreateShader");
     gl_ShaderSource = (PFNGLSHADERSOURCEPROC) glutGetProcAddress ("glShaderSource");
@@ -152,7 +152,7 @@ void initExtensionEntries(void)
     }
 }
 
-const ourGLchar *vertexShaderSource[] = {
+static const ourGLchar *vertexShaderSource[] = {
     "/**",
     " * From the OpenGL Programming wikibook: http://en.wikibooks.org/wiki/GLSL_Programming/GLUT/Smooth_Specular_Highlights",
     " * This file is in the public domain.",
@@ -176,7 +176,7 @@ const ourGLchar *vertexShaderSource[] = {
     "}"
 };
 
-const ourGLchar *fragmentShaderSource[] = {
+static const ourGLchar *fragmentShaderSource[] = {
     "/**",
     " * From the OpenGL Programming wikibook: http://en.wikibooks.org/wiki/GLSL_Programming/GLUT/Smooth_Specular_Highlights",
     " * This file is in the public domain.",
@@ -276,7 +276,7 @@ const ourGLchar *fragmentShaderSource[] = {
     "}"
 };
 
-GLint getAttribOrUniformLocation(const char* name, GLuint program, GLboolean isAttrib)
+static GLint getAttribOrUniformLocation(const char* name, GLuint program, GLboolean isAttrib)
 {
     if (isAttrib)
     {
@@ -309,7 +309,7 @@ GLint shaderReady = 0;  /* Set to 1 when all initialization went well, to -1 whe
 
 
 
-void compileAndCheck(GLuint shader)
+static void compileAndCheck(GLuint shader)
 {
     GLint status;
     gl_CompileShader (shader);
@@ -326,7 +326,7 @@ void compileAndCheck(GLuint shader)
     checkError ("compileAndCheck");
 }
 
-GLuint compileShaderSource(GLenum type, GLsizei count, const ourGLchar **string)
+static GLuint compileShaderSource(GLenum type, GLsizei count, const ourGLchar **string)
 {
     GLuint shader = gl_CreateShader (type);
     gl_ShaderSource (shader, count, string, NULL);
@@ -337,7 +337,7 @@ GLuint compileShaderSource(GLenum type, GLsizei count, const ourGLchar **string)
     return shader;
 }
 
-void linkAndCheck(GLuint program)
+static void linkAndCheck(GLuint program)
 {
     GLint status;
     gl_LinkProgram (program);
@@ -354,7 +354,7 @@ void linkAndCheck(GLuint program)
     checkError ("linkAndCheck");
 }
 
-void createProgram(GLuint vertexShader, GLuint fragmentShader)
+static void createProgram(GLuint vertexShader, GLuint fragmentShader)
 {
     program = gl_CreateProgram ();
     if (vertexShader != 0) {
@@ -369,7 +369,7 @@ void createProgram(GLuint vertexShader, GLuint fragmentShader)
     linkAndCheck (program);
 }
 
-void initShader(void)
+static void initShader(void)
 {
     const GLsizei vertexShaderLines = sizeof(vertexShaderSource) / sizeof(ourGLchar*);
     GLuint vertexShader =
@@ -882,20 +882,25 @@ idle(void)
     glutPostRedisplay();
 }
 
-const GLfloat light_ambient[]  = { 0.0f, 0.0f, 0.0f, 1.0f };
-const GLfloat light_diffuse[]  = { 1.0f, 1.0f, 1.0f, 1.0f };
-const GLfloat light_specular[] = { 1.0f, 1.0f, 1.0f, 1.0f };
-const GLfloat light_position[] = { 2.0f, 5.0f, 5.0f, 0.0f };
+static const GLfloat light_ambient[]  = { 0.0f, 0.0f, 0.0f, 1.0f };
+static const GLfloat light_diffuse[]  = { 1.0f, 1.0f, 1.0f, 1.0f };
+static const GLfloat light_specular[] = { 1.0f, 1.0f, 1.0f, 1.0f };
+static const GLfloat light_position[] = { 2.0f, 5.0f, 5.0f, 0.0f };
 
-const GLfloat mat_ambient[]    = { 0.7f, 0.7f, 0.7f, 1.0f };
-const GLfloat mat_diffuse[]    = { 0.8f, 0.8f, 0.8f, 1.0f };
-const GLfloat mat_specular[]   = { 1.0f, 1.0f, 1.0f, 1.0f };
-const GLfloat high_shininess[] = { 100.0f };
+static const GLfloat mat_ambient[]    = { 0.7f, 0.7f, 0.7f, 1.0f };
+static const GLfloat mat_diffuse[]    = { 0.8f, 0.8f, 0.8f, 1.0f };
+static const GLfloat mat_specular[]   = { 1.0f, 1.0f, 1.0f, 1.0f };
+static const GLfloat high_shininess[] = { 100.0f };
 
 /* Program entry point */
 
-int
-main(int argc, char *argv[])
+
+
+#if defined(BUILD_MONOLITHIC)
+#define main      fg_shapes_demo_main
+#endif
+
+int main(int argc, const char **argv)
 {
     glutInitWindowSize(800,600);
     glutInitWindowPosition(40,40);

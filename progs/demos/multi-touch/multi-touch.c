@@ -39,7 +39,7 @@ typedef struct cursor {
     float x;
     float y;
 } *Cursor;
-struct cursor cursors[NUM_DEVICES][NUM_CURSORS];
+static struct cursor cursors[NUM_DEVICES][NUM_CURSORS];
 
 
 static float square[] = {
@@ -49,7 +49,7 @@ static float square[] = {
          .5,  .5,
     };
 
-void onDisplay(void) {
+static void onDisplay(void) {
     int d;
     glClearColor(0,0,0,1);
     glClear(GL_COLOR_BUFFER_BIT);
@@ -92,7 +92,7 @@ void onDisplay(void) {
     glutSwapBuffers();
 }
 
-void onMouse(int button, int state, int x, int y) {
+static void onMouse(int button, int state, int x, int y) {
     if (button == 0) {
         cursors[0][0].on = (state == GLUT_DOWN);
         cursors[0][0].x = (float)x;
@@ -101,14 +101,14 @@ void onMouse(int button, int state, int x, int y) {
     }
 }
 
-void onMotion(int x, int y) {
+static void onMotion(int x, int y) {
     cursors[0][0].x = (float)x;
     cursors[0][0].y = (float)y;
 }
 
 /* Using FG2.8 (reversed) prototype for now */
 /* void onMultiButton(int cursor_id, int button, int state, int x, int y) { */
-void onMultiButton(int cursor_id, int x, int y, int button, int state) {
+static void onMultiButton(int cursor_id, int x, int y, int button, int state) {
     if (cursor_id >= NUM_CURSORS) {
         fprintf(stderr, "cursor_id (%d) >= NUM_CURSORS (%d), out of slots\n", cursor_id, NUM_CURSORS);
         return;
@@ -121,7 +121,7 @@ void onMultiButton(int cursor_id, int x, int y, int button, int state) {
     }
 }
 
-void onMultiMotion(int cursor_id, int x, int y) {
+static void onMultiMotion(int cursor_id, int x, int y) {
     if (cursor_id >= NUM_CURSORS) {
         fprintf(stderr, "cursor_id (%d) >= NUM_CURSORS (%d), out of slots\n", cursor_id, NUM_CURSORS);
         return;
@@ -130,18 +130,25 @@ void onMultiMotion(int cursor_id, int x, int y) {
     cursors[0][cursor_id].y = (float)y;
 }
 
-void onReshape(int width, int height) {
+static void onReshape(int width, int height) {
     glViewport(0, 0, width, height);
     
     glMatrixMode(GL_PROJECTION);
     glOrtho(0, width, height, 0, -1, 1);
 }
 
-void onIdle(void) {
+static void onIdle(void) {
     glutPostRedisplay();
 }
 
-int main(int argc, char* argv[]) {
+
+
+#if defined(BUILD_MONOLITHIC)
+#define main      fg_multi_touch_demo_main
+#endif
+
+int main(int argc, const char **argv)
+{
     memset(cursors, 0, sizeof(cursors));
 
     glutInit(&argc, argv);

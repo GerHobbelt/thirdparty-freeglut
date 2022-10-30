@@ -52,26 +52,26 @@
 
 /*************************************** Global Variables ***************************************/
 /* Lorenz Attractor variables */
-double s0 = 10.0, r0 = 28.0, b0 = 8.0/3.0 ;   /* Default Lorenz attactor parameters */
-double time_step = 0.03 ;                     /* Time step in the simulation */
-double sigma = 10.0, r = 28.0, b = 8.0/3.0 ;  /* Lorenz attactor parameters */
-double red_position[NUM_POINTS][3] ;          /* Path of the red point */
-double grn_position[NUM_POINTS][3] ;          /* Path of the green point */
-int array_index ;                             /* Position in *_position arrays of most recent point */
-double distance = 0.0 ;                       /* Distance between the two points */
+static double s0 = 10.0, r0 = 28.0, b0 = 8.0/3.0 ;   /* Default Lorenz attactor parameters */
+static double time_step = 0.03 ;                     /* Time step in the simulation */
+static double sigma = 10.0, r = 28.0, b = 8.0/3.0 ;  /* Lorenz attactor parameters */
+static double red_position[NUM_POINTS][3] ;          /* Path of the red point */
+static double grn_position[NUM_POINTS][3] ;          /* Path of the green point */
+static int array_index ;                             /* Position in *_position arrays of most recent point */
+static double distance = 0.0 ;                       /* Distance between the two points */
 
 /* GLUT variables */
-double yaw = 0.0, pit = 0.0 ;                 /* Euler angles of the viewing rotation */
-double scale = 1.0 ;                          /* Scale factor */
-double xcen = 0.0, ycen = 0.0, zcen = 0.0 ;   /* Coordinates of the point looked at */
+static double yaw = 0.0, pit = 0.0 ;                 /* Euler angles of the viewing rotation */
+static double scale = 1.0 ;                          /* Scale factor */
+static double xcen = 0.0, ycen = 0.0, zcen = 0.0 ;   /* Coordinates of the point looked at */
 
-int animate = 1 ;                             /* 0 - stop, 1 = go, 2 = single-step */
+static int animate = 1 ;                             /* 0 - stop, 1 = go, 2 = single-step */
 
 
 /******************************************* Functions ******************************************/
 
 /* The Lorenz Attractor */
-void calc_deriv ( double position[3], double deriv[3] )
+static void calc_deriv ( double position[3], double deriv[3] )
 {
   /* Calculate the Lorenz attractor derivatives */
   deriv[0] = sigma * ( position[1] - position[0] ) ;
@@ -79,7 +79,7 @@ void calc_deriv ( double position[3], double deriv[3] )
   deriv[2] = -position[0] * position[1] - b * position[2] ;
 }
 
-void advance_in_time ( double time_step, double position[3], double new_position[3] )
+static void advance_in_time ( double time_step, double position[3], double new_position[3] )
 {
   /* Move a point along the Lorenz attractor */
   double deriv0[3], deriv1[3], deriv2[3], deriv3[3] ;
@@ -122,7 +122,7 @@ checkedFGets ( char *s, int size, FILE *stream )
 
 #define INPUT_LINE_LENGTH 80
 
-void key_cb ( unsigned char key, int x, int y )
+static void key_cb ( unsigned char key, int x, int y )
 {
   int i ;
   char inputline [ INPUT_LINE_LENGTH ] ;
@@ -184,7 +184,7 @@ void key_cb ( unsigned char key, int x, int y )
   }
 }
 
-void special_cb ( int key, int x, int y )
+static void special_cb ( int key, int x, int y )
 {
   switch ( key )
   {
@@ -216,7 +216,7 @@ void special_cb ( int key, int x, int y )
   glutPostRedisplay () ;
 }
 
-void mouse_cb ( int button, int updown, int x, int y )
+static void mouse_cb ( int button, int updown, int x, int y )
 {
   if ( updown == GLUT_DOWN )
   {
@@ -227,7 +227,7 @@ void mouse_cb ( int button, int updown, int x, int y )
   }
 }
 
-void draw_curve ( int index, double position [ NUM_POINTS ][3] )
+static void draw_curve ( int index, double position [ NUM_POINTS ][3] )
 {
   int i = index ;
 
@@ -242,7 +242,7 @@ void draw_curve ( int index, double position [ NUM_POINTS ][3] )
   glEnd () ;
 }
 
-void bitmapPrintf (const char *fmt, ...)
+static void bitmapPrintf (const char *fmt, ...)
 {
     static char buf[256];
     va_list args;
@@ -257,7 +257,7 @@ void bitmapPrintf (const char *fmt, ...)
     glutBitmapString ( GLUT_BITMAP_HELVETICA_12, (unsigned char*)buf ) ;
 }
 
-void display_cb ( void )
+static void display_cb ( void )
 {
   glClear ( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT ) ;
 
@@ -286,7 +286,7 @@ void display_cb ( void )
   glutSwapBuffers();
 }
 
-void reshape_cb ( int width, int height )
+static void reshape_cb ( int width, int height )
 {
   float ar;
   glViewport ( 0, 0, width, height ) ;
@@ -303,7 +303,7 @@ void reshape_cb ( int width, int height )
 }
 
 
-void timer_cb ( int value )
+static void timer_cb ( int value )
 {
   /* Function called at regular intervals to update the positions of the points */
   double deltax, deltay, deltaz ;
@@ -334,7 +334,12 @@ void timer_cb ( int value )
 
 /* The Main Program */
 
-int main ( int argc, char *argv[] )
+
+#if defined(BUILD_MONOLITHIC)
+#define main      fg_lorenz_demo_main
+#endif
+
+int main (int argc, const char **argv)
 {
   int pargc = argc ;
 

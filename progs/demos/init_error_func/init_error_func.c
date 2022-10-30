@@ -22,7 +22,7 @@
 #include <stdarg.h>
 
 /* The new handler looks like a vprintf prototype */
-void myError (const char *fmt, va_list ap)
+static void myError (const char *fmt, va_list ap)
 {
     fprintf(stderr, "myError: Entering user defined error handler\n");
 
@@ -47,7 +47,13 @@ void myError (const char *fmt, va_list ap)
  * demonstrate the user defined handler
  * ------------------------------------------
  */
-int main(int argc, char** argv)
+
+
+#if defined(BUILD_MONOLITHIC)
+#define main      fg_init_error_func_demo_main
+#endif
+
+int main(int argc, const char **argv)
 {
     glutInitErrorFunc(&myError);
     glutCreateWindow ("error test");  /* This is an error! */

@@ -47,14 +47,14 @@ static int num_trans ;
 static AffineTrans *affine ;
 
 /* the window title */
-char window_title [ 80 ] ;
+static char window_title [ 80 ] ;
 
 /* The amount the view is translated */
-double xwin = 0.0, ywin = 0.0 ;
-double scale_factor = 1.0 ;
+static double xwin = 0.0, ywin = 0.0 ;
+static double scale_factor = 1.0 ;
 
 /* The current point */
-double current_x = 0.0, current_y = 0.0 ;
+static double current_x = 0.0, current_y = 0.0 ;
 
 /* Signals when a glClear is needed */
 static GLboolean needClear = GL_TRUE;
@@ -266,7 +266,7 @@ checkedFGets ( char *s, int size, FILE *stream )
 }
 
 
-void readConfigFile ( char *fnme )
+static void readConfigFile ( const char *fnme )
 {
   FILE *fptr = fopen ( fnme, "rt" ) ;
   int i ;
@@ -352,8 +352,12 @@ void readConfigFile ( char *fnme )
   }
 }
 
-int 
-main(int argc, char *argv[])
+
+#if defined(BUILD_MONOLITHIC)
+#define main      fg_fractals_random_demo_main
+#endif
+
+int main(int argc, const char **argv)
 {
   glutInitDisplayMode( GLUT_RGB | GLUT_SINGLE );
 

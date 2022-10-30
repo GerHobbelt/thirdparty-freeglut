@@ -17,14 +17,14 @@
 
 #include <GL/freeglut.h>
 
-int g_LeaveGameMode = 0;
-int g_InGameMode = 0;
-int g_mainwin1, g_mainwin2, g_sw1, g_sw2, g_gamemodewin;
+static int g_LeaveGameMode = 0;
+static int g_InGameMode = 0;
+static int g_mainwin1, g_mainwin2, g_sw1, g_sw2, g_gamemodewin;
 
 /*
  * Call this function to have some text drawn at given coordinates
  */
-void PrintText( int nX, int nY, char* pszText )
+static void PrintText( int nX, int nY, char* pszText )
 {
     int lines;
     char *p;
@@ -90,7 +90,7 @@ void PrintText( int nX, int nY, char* pszText )
 /*
  * This is the display routine for our sample FreeGLUT windows
  */
-void SampleDisplay( void )
+static void SampleDisplay( void )
 {
     int win = glutGetWindow();
 
@@ -175,7 +175,7 @@ void SampleDisplay( void )
 /*
  * This is a sample idle function
  */
-void SampleIdle( void )
+static void SampleIdle( void )
 {
     if( g_LeaveGameMode == 1 )
     {
@@ -191,7 +191,7 @@ void SampleIdle( void )
     }
 }
 
-void SampleEntry(int state)
+static void SampleEntry(int state)
 {
     int window = glutGetWindow () ;
     printf ( "Window %d Entry Callback: %d\n", window, state ) ;
@@ -200,7 +200,7 @@ void SampleEntry(int state)
 /*
  * The reshape function
  */
-void SampleReshape( int nWidth, int nHeight )
+static void SampleReshape( int nWidth, int nHeight )
 {
     GLfloat fAspect = (GLfloat) nHeight / (GLfloat) nWidth;
     GLfloat fPos[ 4 ] = { 0.0f, 0.0f, 10.0f, 0.0f };
@@ -248,7 +248,7 @@ void SampleReshape( int nWidth, int nHeight )
 /*
  * A sample keyboard callback
  */
-void SampleKeyboard( unsigned char cChar, int nMouseX, int nMouseY )
+static void SampleKeyboard( unsigned char cChar, int nMouseX, int nMouseY )
 {
     printf( "SampleKeyboard(): keypress '%c' at (%i,%i)\n",
             cChar, nMouseX, nMouseY );
@@ -257,7 +257,7 @@ void SampleKeyboard( unsigned char cChar, int nMouseX, int nMouseY )
 /*
  * A sample keyboard callback (for game mode window)
  */
-void SampleGameModeKeyboard( unsigned char cChar, int nMouseX, int nMouseY )
+static void SampleGameModeKeyboard( unsigned char cChar, int nMouseX, int nMouseY )
 {
     if( cChar == 27 )
         g_LeaveGameMode = 1;
@@ -267,7 +267,7 @@ void SampleGameModeKeyboard( unsigned char cChar, int nMouseX, int nMouseY )
 /*
  * A sample special callback
  */
-void SampleSpecial( int nSpecial, int nMouseX, int nMouseY )
+static void SampleSpecial( int nSpecial, int nMouseX, int nMouseY )
 {
     printf( "SampleSpecial(): special keypress %i at (%i,%i)\n",
             nSpecial, nMouseX, nMouseY );
@@ -276,7 +276,7 @@ void SampleSpecial( int nSpecial, int nMouseX, int nMouseY )
 /*
  * A sample menu callback
  */
-void SampleMenu( int menuID )
+static void SampleMenu( int menuID )
 {
     printf( "SampleMenu() callback executed, menuID is %i\n", menuID );
 }
@@ -284,7 +284,7 @@ void SampleMenu( int menuID )
 /*
  * A sample menu status callback
  */
-void SampleMenuStatus( int status, int x, int y )
+static void SampleMenuStatus( int status, int x, int y )
 {
     printf ( "SampleMenu() callback executed, MenuStatus is %i at (%i,%i)\n", status, x, y );
 }
@@ -292,7 +292,13 @@ void SampleMenuStatus( int status, int x, int y )
 /*
  * The sample's entry point
  */
-int main( int argc, char** argv )
+
+
+#if defined(BUILD_MONOLITHIC)
+#define main      fg_one_demo_main
+#endif
+
+int main(int argc, const char **argv)
 {
     int menuID, subMenuA, subMenuB;
 

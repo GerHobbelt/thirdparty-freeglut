@@ -44,11 +44,11 @@ static AffineTrans *affine ;
 static int continue_in_main_loop = 1;
 
 /* the window title */
-char window_title [ 80 ] ;
+static char window_title [ 80 ] ;
 
 /* The amount the view is translated and scaled */
-double xwin = 0.0, ywin = 0.0 ;
-double scale_factor = 1.0 ;
+static double xwin = 0.0, ywin = 0.0 ;
+static double scale_factor = 1.0 ;
 
 static void draw_level ( int num, double m00, double m01, double m10, double m11, double n0, double n1 )
 {
@@ -222,7 +222,7 @@ checkedFGets ( char *s, int size, FILE *stream )
 }
 
 
-void readConfigFile ( char *fnme )
+static void readConfigFile ( const char *fnme )
 {
   FILE *fptr = fopen ( fnme, "rt" ) ;
   int i ;
@@ -308,8 +308,12 @@ void readConfigFile ( char *fnme )
   }
 }
 
-int 
-main(int argc, char *argv[])
+
+#if defined(BUILD_MONOLITHIC)
+#define main      fg_fractals_demo_main
+#endif
+
+int main(int argc, const char **argv)
 {
   glutInitWindowSize(500, 250);
   glutInitWindowPosition ( 140, 140 );

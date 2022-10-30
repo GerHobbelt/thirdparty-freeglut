@@ -8,13 +8,13 @@
 #include <stdio.h>
 #include <GL/glut.h>
 
-void disp(void);
-void timer_func(int unused);
+static void disp(void);
+static void timer_func(int unused);
 
 /* color index will be advanced every time the timer expires */
-int cidx = 0;
-int pcidx = 2;
-float color[][3] = {
+static int cidx = 0;
+static int pcidx = 2;
+static float color[][3] = {
 	{1, 0, 0},
 	{0, 1, 0},
 	{0, 0, 1},
@@ -22,17 +22,17 @@ float color[][3] = {
 	{0, 1, 1},
 	{1, 0, 1}
 };
-int timerInts[] = {
+static int timerInts[] = {
     250,
     500,
     1000
 };
-int timerSurroundInt = 1000, timerCenterInt = 1000;
+static int timerSurroundInt = 1000, timerCenterInt = 1000;
 
 /* menu IDs, creation/update funcs and callback */
-int menuID, subMenuSurround, subMenuCenter;
+static int menuID, subMenuSurround, subMenuCenter;
 
-void createMenuEntries(int which)
+static void createMenuEntries(int which)
 {
 	int i;
     for (i = 0; i < sizeof(timerInts) / sizeof(*timerInts); i++)
@@ -50,7 +50,7 @@ void createMenuEntries(int which)
     }
 }
 
-void updateMenuEntries(int which)
+static void updateMenuEntries(int which)
 {
 	int i;
     for (i = 0; i < sizeof(timerInts) / sizeof(*timerInts); i++)
@@ -68,20 +68,27 @@ void updateMenuEntries(int which)
     }
 }
 
-void MenuSurround(int timerInt)
+static void MenuSurround(int timerInt)
 {
     timerSurroundInt = timerInt;
     glutSetMenu(subMenuSurround);
     updateMenuEntries(1);
 }
-void MenuCenter(int timerInt)
+static void MenuCenter(int timerInt)
 {
     timerCenterInt = timerInt;
     glutSetMenu(subMenuCenter);
     updateMenuEntries(2);
 }
 
-int main(int argc, char **argv)
+
+
+#if defined(BUILD_MONOLITHIC)
+#define main      fg_timer_demo_main
+#endif
+
+
+int main(int argc, const char **argv)
 {
 	glutInit(&argc, argv);
 	glutInitWindowSize(128, 128);
@@ -110,7 +117,7 @@ int main(int argc, char **argv)
 	return 0;
 }
 
-void disp(void)
+static void disp(void)
 {
 	glClearColor(color[cidx][0], color[cidx][1], color[cidx][2], 1);
 	glClear(GL_COLOR_BUFFER_BIT);
@@ -124,7 +131,7 @@ void disp(void)
 	glutSwapBuffers();
 }
 
-void timer_func(int which)
+static void timer_func(int which)
 {
 	/* advance the color index and trigger a redisplay */
     switch (which)

@@ -25,8 +25,8 @@
 #endif
 
 #define MAXSTR 16
-char **strings;
-int mainwin;
+static char **strings;
+static int mainwin;
 
 
 /*!
@@ -166,8 +166,13 @@ entry(int state)
 
 /* Program entry point */
 
-int
-main(int argc, char *argv[])
+
+
+#if defined(BUILD_MONOLITHIC)
+#define main      fg_subwin_demo_main
+#endif
+
+int main(int argc, const char **argv)
 {
 	int winmax,sw1,sw2,sw2sw,i;
 	

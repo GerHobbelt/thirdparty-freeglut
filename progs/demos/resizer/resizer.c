@@ -2,20 +2,20 @@
 
 #include <GL/freeglut.h>
 
-int nWindow, nChildWindow = -1;
-int nLoopMain = 0;
-GLboolean bChildPosDone = GL_FALSE, bChildSizeDone = GL_FALSE;
+static int nWindow, nChildWindow = -1;
+static int nLoopMain = 0;
+static GLboolean bChildPosDone = GL_FALSE, bChildSizeDone = GL_FALSE;
 
-void SampleKeyboard( unsigned char cChar, int nMouseX, int nMouseY );
-void Redisplay();
-void Reshape(int width, int height);
-void Position(int x, int y);
-void WindowStatus(int state);
-
-
+static void SampleKeyboard( unsigned char cChar, int nMouseX, int nMouseY );
+static void Redisplay();
+static void Reshape(int width, int height);
+static void Position(int x, int y);
+static void WindowStatus(int state);
 
 
-void DrawQuad()
+
+
+static void DrawQuad()
 {
     int width  = glutGet(GLUT_WINDOW_WIDTH);
     int height = glutGet(GLUT_WINDOW_HEIGHT);
@@ -28,19 +28,19 @@ void DrawQuad()
     glEnd();
 }
 
-void UnhideTimer(int window)
+static void UnhideTimer(int window)
 {
     glutSetWindow(window);
     glutShowWindow();
 }
 
-void ChangeTitleTimer(int unused)
+static void ChangeTitleTimer(int unused)
 {
     glutSetIconTitle("new icon title");
     glutSetWindowTitle("new test title");
 }
 
-void SampleKeyboard( unsigned char cChar, int nMouseX, int nMouseY )
+static void SampleKeyboard( unsigned char cChar, int nMouseX, int nMouseY )
 {
     switch (cChar)
     {
@@ -233,12 +233,12 @@ void SampleKeyboard( unsigned char cChar, int nMouseX, int nMouseY )
     }
 }
 
-void Idle(void)
+static void Idle(void)
 {
     glutPostRedisplay();
 }
 
-void Reshape(int width, int height)
+static void Reshape(int width, int height)
 {
     int win = glutGetWindow();
 
@@ -271,7 +271,7 @@ void Reshape(int width, int height)
     }
 }
 
-void Position(int x, int y)
+static void Position(int x, int y)
 {
     int win = glutGetWindow();
 
@@ -279,13 +279,13 @@ void Position(int x, int y)
         x, y);
 }
 
-void WindowStatus(int state)
+static void WindowStatus(int state)
 {
     int win = glutGetWindow();
     printf("windowstatus (win %i): %i\n",win,state);
 }
 
-void Redisplay(void)
+static void Redisplay(void)
 {
     int win = glutGetWindow();
     int viewport[4];
@@ -317,7 +317,7 @@ void Redisplay(void)
     glutPostWindowRedisplay(win);
 }
 
-void Timer(int unused)
+static void Timer(int unused)
 {
     int win = glutGetWindow();
     int x, y;
@@ -357,7 +357,12 @@ void Timer(int unused)
 }
 
 
-int main(int argc, char* argv[])
+
+#if defined(BUILD_MONOLITHIC)
+#define main      fg_resizer_demo_main
+#endif
+
+int main(int argc, const char **argv)
 {
     int border, caption;
     glutInit( &argc, argv );

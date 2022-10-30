@@ -16,21 +16,27 @@
 #pragma warning (disable: 4305 4244)
 #endif
 
-void display(void);
-void rect(float x0, float y0, float x1, float y1);
-void text(float x, float y, const char *fmt, ...);
-void widget(float xsz, float ysz, float xpos, float ypos);
-void button(float sz, float state);
-void reshape(int x, int y);
-void keyboard(unsigned char key, int x, int y);
-void joystick(unsigned int bmask, int x, int y, int z);
+static void display(void);
+static void rect(float x0, float y0, float x1, float y1);
+static void text(float x, float y, const char *fmt, ...);
+static void widget(float xsz, float ysz, float xpos, float ypos);
+static void button(float sz, float state);
+static void reshape(int x, int y);
+static void keyboard(unsigned char key, int x, int y);
+static void joystick(unsigned int bmask, int x, int y, int z);
 
-int win_width, win_height;
-int joy[3];
-unsigned int joy_bmask;
-int num_buttons, bhist;
+static int win_width, win_height;
+static int joy[3];
+static unsigned int joy_bmask;
+static int num_buttons, bhist;
 
-int main(int argc, char **argv)
+
+
+#if defined(BUILD_MONOLITHIC)
+#define main      fg_joystick_demo_main
+#endif
+
+int main(int argc, const char **argv)
 {
 	glutInit(&argc, argv);
 	glutInitWindowSize(800, 600);
@@ -51,6 +57,7 @@ int main(int argc, char **argv)
 	printf("Joystick buttons: %d\n", num_buttons);
 
 	glutMainLoop();
+	return 0;
 }
 
 #define WSZ		0.8
@@ -58,7 +65,7 @@ int main(int argc, char **argv)
 #define FRM		0.0075
 #define MAX_BSZ	(WSZ / 9)
 
-void display(void)
+static void display(void)
 {
 	float dmax = WSZ * 0.5f - RAD;
 	float jx, jy, jz, cury, bsz;
@@ -119,7 +126,7 @@ void display(void)
 	glutSwapBuffers();
 }
 
-void rect(float x0, float y0, float x1, float y1)
+static void rect(float x0, float y0, float x1, float y1)
 {
 	glVertex2f(x0, y0);
 	glVertex2f(x1, y0);
@@ -127,7 +134,7 @@ void rect(float x0, float y0, float x1, float y1)
 	glVertex2f(x0, y1);
 }
 
-void text(float x, float y, const char *fmt, ...)
+static void text(float x, float y, const char *fmt, ...)
 {
 	va_list ap;
 	char buf[256], *s;
@@ -154,7 +161,7 @@ void text(float x, float y, const char *fmt, ...)
 	glPopMatrix();
 }
 
-void widget(float xsz, float ysz, float xpos, float ypos)
+static void widget(float xsz, float ysz, float xpos, float ypos)
 {
 	int i;
 	float x, y, theta;
@@ -178,7 +185,7 @@ void widget(float xsz, float ysz, float xpos, float ypos)
 	glEnd();
 }
 
-void button(float sz, float state)
+static void button(float sz, float state)
 {
 	glBegin(GL_QUADS);
 	glColor3f(1, 1, 1);
@@ -189,7 +196,7 @@ void button(float sz, float state)
 	glEnd();
 }
 
-void reshape(int x, int y)
+static void reshape(int x, int y)
 {
 	float aspect = (float)x / y;
 
@@ -203,14 +210,14 @@ void reshape(int x, int y)
 	glScalef(1.0 / aspect, 1, 1);
 }
 
-void keyboard(unsigned char key, int x, int y)
+static void keyboard(unsigned char key, int x, int y)
 {
 	if(key == 27 || key == 'q') {
 		exit(0);
 	}
 }
 
-void joystick(unsigned int bmask, int x, int y, int z)
+static void joystick(unsigned int bmask, int x, int y, int z)
 {
 	joy[0] = x;
 	joy[1] = y;

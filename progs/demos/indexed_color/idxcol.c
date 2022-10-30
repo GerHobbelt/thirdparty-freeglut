@@ -11,22 +11,27 @@
 #include <stdlib.h>
 #include <GL/freeglut.h>
 
-void display(void);
-void reshape(int x, int y);
-void keyb(unsigned char key, int x, int y);
-void mouse(int bn, int st, int x, int y);
-void motion(int x, int y);
+static void display(void);
+static void reshape(int x, int y);
+static void keyb(unsigned char key, int x, int y);
+static void mouse(int bn, int st, int x, int y);
+static void motion(int x, int y);
 
-float cam_theta, cam_phi, cam_dist = 6;
+static float cam_theta, cam_phi, cam_dist = 6;
 
-int prev_x, prev_y;
-int bnstate[8];
+static int prev_x, prev_y;
+static int bnstate[8];
 
-int sphere, torus;
-int redramp[3], blueramp[3];
+static int sphere, torus;
+static int redramp[3], blueramp[3];
 
 
-int main(int argc, char **argv)
+
+#if defined(BUILD_MONOLITHIC)
+#define main      fg_indexed_color_demo_main
+#endif
+
+int main(int argc, const char **argv)
 {
 	int i, ncolors, rampsz, maxdif;
 	float x;
@@ -95,7 +100,7 @@ int main(int argc, char **argv)
 	return 0;
 }
 
-void display(void)
+static void display(void)
 {
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
@@ -125,7 +130,7 @@ void display(void)
 	glutSwapBuffers();
 }
 
-void reshape(int x, int y)
+static void reshape(int x, int y)
 {
 	glViewport(0, 0, x, y);
 
@@ -134,7 +139,7 @@ void reshape(int x, int y)
 	gluPerspective(50.0, (float)x / y, 0.5, 500.0);
 }
 
-void keyb(unsigned char key, int x, int y)
+static void keyb(unsigned char key, int x, int y)
 {
 	switch(key) {
 	case 27:
@@ -142,14 +147,14 @@ void keyb(unsigned char key, int x, int y)
 	}
 }
 
-void mouse(int bn, int st, int x, int y)
+static void mouse(int bn, int st, int x, int y)
 {
 	bnstate[bn - GLUT_LEFT_BUTTON] = st == GLUT_DOWN;
 	prev_x = x;
 	prev_y = y;
 }
 
-void motion(int x, int y)
+static void motion(int x, int y)
 {
 	int dx, dy;
 

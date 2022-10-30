@@ -164,7 +164,7 @@ static void display(void)
 
     glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
-    glFrustumf(-ar, ar, -1.0, 1.0, 2.0, 100.0);
+    glFrustum(-ar, ar, -1.0, 1.0, 2.0, 100.0);
     glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
 
@@ -274,19 +274,19 @@ onMouseClick(int button, int state, int x, int y) {
     special(GLUT_KEY_PAGE_UP, 0, 0);
 }
 
-const GLfloat light_ambient[]  = { 0.0f, 0.0f, 0.0f, 1.0f };
-const GLfloat light_diffuse[]  = { 1.0f, 1.0f, 1.0f, 1.0f };
-const GLfloat light_specular[] = { 1.0f, 1.0f, 1.0f, 1.0f };
-const GLfloat light_position[] = { 2.0f, 5.0f, 5.0f, 0.0f };
+static const GLfloat light_ambient[]  = { 0.0f, 0.0f, 0.0f, 1.0f };
+static const GLfloat light_diffuse[]  = { 1.0f, 1.0f, 1.0f, 1.0f };
+static const GLfloat light_specular[] = { 1.0f, 1.0f, 1.0f, 1.0f };
+static const GLfloat light_position[] = { 2.0f, 5.0f, 5.0f, 0.0f };
 
-const GLfloat mat_ambient[]    = { 0.7f, 0.7f, 0.7f, 1.0f };
-const GLfloat mat_diffuse[]    = { 0.8f, 0.8f, 0.8f, 1.0f };
-const GLfloat mat_specular[]   = { 1.0f, 1.0f, 1.0f, 1.0f };
-const GLfloat high_shininess[] = { 100.0f };
+static const GLfloat mat_ambient[]    = { 0.7f, 0.7f, 0.7f, 1.0f };
+static const GLfloat mat_diffuse[]    = { 0.8f, 0.8f, 0.8f, 1.0f };
+static const GLfloat mat_specular[]   = { 1.0f, 1.0f, 1.0f, 1.0f };
+static const GLfloat high_shininess[] = { 100.0f };
 
 /* Program entry point */
 
-void init_context() {
+static void init_context(void) {
     printf("init_context\n"); fflush(stdout);
     glClearColor(1,1,1,1);
     glEnable(GL_CULL_FACE);
@@ -310,8 +310,13 @@ void init_context() {
     glMaterialfv(GL_FRONT, GL_SHININESS, high_shininess);
 }
 
-int
-main(int argc, char *argv[])
+
+
+#if defined(BUILD_MONOLITHIC)
+#define main      fg_test_shapes_main
+#endif
+
+int main(int argc, const char **argv)
 {
     glutInitWindowSize(640,480);
     glutInitWindowPosition(40,40);

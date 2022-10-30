@@ -4,21 +4,27 @@
 #include <ctype.h>
 #include <GL/freeglut.h>
 
-void display(void);
-void draw_text(int x, int y, const char *str);
-const char *skeyname(int skey);
-void reshape(int x, int y);
-void keypress(unsigned char key, int x, int y);
-void keyrelease(unsigned char key, int x, int y);
-void skeypress(int key, int x, int y);
-void skeyrelease(int key, int x, int y);
+static void display(void);
+static void draw_text(int x, int y, const char *str);
+static const char *skeyname(int skey);
+static void reshape(int x, int y);
+static void keypress(unsigned char key, int x, int y);
+static void keyrelease(unsigned char key, int x, int y);
+static void skeypress(int key, int x, int y);
+static void skeyrelease(int key, int x, int y);
 
-unsigned int modstate;
-int cur_key = -1;
-int cur_skey = -1;
-int win_width, win_height;
+static unsigned int modstate;
+static int cur_key = -1;
+static int cur_skey = -1;
+static int win_width, win_height;
 
-int main(int argc, char **argv)
+
+
+#if defined(BUILD_MONOLITHIC)
+#define main      fg_keyboard_demo_main
+#endif
+
+int main(int argc, const char **argv)
 {
 	glutInit(&argc, argv);
 	glutInitWindowSize(400, 200);
@@ -36,7 +42,7 @@ int main(int argc, char **argv)
 	return 0;
 }
 
-void display(void)
+static void display(void)
 {
 	char str[256];
 
@@ -75,7 +81,7 @@ void display(void)
 	glutSwapBuffers();
 }
 
-void draw_text(int x, int y, const char *str)
+static void draw_text(int x, int y, const char *str)
 {
 	glRasterPos2i(x, y);
 	while(*str) {
@@ -83,7 +89,7 @@ void draw_text(int x, int y, const char *str)
 	}
 }
 
-const char *skeyname(int skey)
+static const char *skeyname(int skey)
 {
 	static const char *fkeys[] = {"F1", "F2", "F3", "F4", "F5", "F6", "F7", "F8", "F9", "F10", "F11", "F12"};
 
@@ -118,7 +124,7 @@ const char *skeyname(int skey)
 	return "<unknown>";
 }
 
-void reshape(int x, int y)
+static void reshape(int x, int y)
 {
 	win_width = x;
 	win_height = y;
@@ -128,7 +134,7 @@ void reshape(int x, int y)
 	glOrtho(0, x, 0, y, -1, 1);
 }
 
-void keypress(unsigned char key, int x, int y)
+static void keypress(unsigned char key, int x, int y)
 {
 	if(key == 27) exit(0);
 
@@ -137,19 +143,19 @@ void keypress(unsigned char key, int x, int y)
 	glutPostRedisplay();
 }
 
-void keyrelease(unsigned char key, int x, int y)
+static void keyrelease(unsigned char key, int x, int y)
 {
 	cur_key = -1;
 	glutPostRedisplay();
 }
 
-void skeypress(int key, int x, int y)
+static void skeypress(int key, int x, int y)
 {
 	cur_skey = key;
 	glutPostRedisplay();
 }
 
-void skeyrelease(int key, int x, int y)
+static void skeyrelease(int key, int x, int y)
 {
 	cur_skey = -1;
 	glutPostRedisplay();

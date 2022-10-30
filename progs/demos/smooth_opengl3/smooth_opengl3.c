@@ -49,7 +49,7 @@
 #include <string.h>
 
 /* report GL errors, if any, to stderr */
-void checkError(const char *functionName)
+static void checkError(const char *functionName)
 {
    GLenum error;
    while (( error = glGetError() ) != GL_NO_ERROR) {
@@ -127,29 +127,29 @@ typedef GLint (APIENTRY *PFNGLGETUNIFORMLOCATIONPROC) (GLuint program, const our
 typedef void (APIENTRY *PFNGLUNIFORMMATRIX4FVPROC) (GLint location, GLsizei count, GLboolean transpose, const GLfloat *value);
 #endif
 
-PFNGLGENVERTEXARRAYSPROC gl_GenVertexArrays;
-PFNGLBINDVERTEXARRAYPROC gl_BindVertexArray;
-PFNGLGENBUFFERSPROC gl_GenBuffers;
-PFNGLBINDBUFFERPROC gl_BindBuffer;
-PFNGLBUFFERDATAPROC gl_BufferData;
-PFNGLCREATESHADERPROC gl_CreateShader;
-PFNGLSHADERSOURCEPROC gl_ShaderSource;
-PFNGLCOMPILESHADERPROC gl_CompileShader;
-PFNGLCREATEPROGRAMPROC gl_CreateProgram;
-PFNGLATTACHSHADERPROC gl_AttachShader;
-PFNGLLINKPROGRAMPROC gl_LinkProgram;
-PFNGLUSEPROGRAMPROC gl_UseProgram;
-PFNGLGETSHADERIVPROC gl_GetShaderiv;
-PFNGLGETSHADERINFOLOGPROC gl_GetShaderInfoLog;
-PFNGLGETPROGRAMIVPROC gl_GetProgramiv;
-PFNGLGETPROGRAMINFOLOGPROC gl_GetProgramInfoLog;
-PFNGLGETATTRIBLOCATIONPROC gl_GetAttribLocation;
-PFNGLVERTEXATTRIBPOINTERPROC gl_VertexAttribPointer;
-PFNGLENABLEVERTEXATTRIBARRAYPROC gl_EnableVertexAttribArray;
-PFNGLGETUNIFORMLOCATIONPROC gl_GetUniformLocation;
-PFNGLUNIFORMMATRIX4FVPROC gl_UniformMatrix4fv;
+static PFNGLGENVERTEXARRAYSPROC gl_GenVertexArrays;
+static PFNGLBINDVERTEXARRAYPROC gl_BindVertexArray;
+static PFNGLGENBUFFERSPROC gl_GenBuffers;
+static PFNGLBINDBUFFERPROC gl_BindBuffer;
+static PFNGLBUFFERDATAPROC gl_BufferData;
+static PFNGLCREATESHADERPROC gl_CreateShader;
+static PFNGLSHADERSOURCEPROC gl_ShaderSource;
+static PFNGLCOMPILESHADERPROC gl_CompileShader;
+static PFNGLCREATEPROGRAMPROC gl_CreateProgram;
+static PFNGLATTACHSHADERPROC gl_AttachShader;
+static PFNGLLINKPROGRAMPROC gl_LinkProgram;
+static PFNGLUSEPROGRAMPROC gl_UseProgram;
+static PFNGLGETSHADERIVPROC gl_GetShaderiv;
+static PFNGLGETSHADERINFOLOGPROC gl_GetShaderInfoLog;
+static PFNGLGETPROGRAMIVPROC gl_GetProgramiv;
+static PFNGLGETPROGRAMINFOLOGPROC gl_GetProgramInfoLog;
+static PFNGLGETATTRIBLOCATIONPROC gl_GetAttribLocation;
+static PFNGLVERTEXATTRIBPOINTERPROC gl_VertexAttribPointer;
+static PFNGLENABLEVERTEXATTRIBARRAYPROC gl_EnableVertexAttribArray;
+static PFNGLGETUNIFORMLOCATIONPROC gl_GetUniformLocation;
+static PFNGLUNIFORMMATRIX4FVPROC gl_UniformMatrix4fv;
 
-void initExtensionEntries(void)
+static void initExtensionEntries(void)
 {
    gl_GenVertexArrays = (PFNGLGENVERTEXARRAYSPROC) glutGetProcAddress ("glGenVertexArrays");
    gl_BindVertexArray = (PFNGLBINDVERTEXARRAYPROC) glutGetProcAddress ("glBindVertexArray");
@@ -191,7 +191,7 @@ void initExtensionEntries(void)
 
 /* vertex array data for a colored 2D triangle, consisting of RGB color values
    and XY coordinates */
-const GLfloat varray[] = {
+static const GLfloat varray[] = {
    1.0f, 0.0f, 0.0f, /* red */
    5.0f, 5.0f,       /* lower left */
 
@@ -211,10 +211,10 @@ enum {
 };
 
 /* the name of the vertex buffer object */
-GLuint vertexBufferName;
-GLuint vertexArrayName;
+static GLuint vertexBufferName;
+static GLuint vertexArrayName;
 
-void initBuffer(void)
+static void initBuffer(void)
 {
    /* Need to setup a vertex array as otherwise invalid operation errors can
     * occur when accessing vertex buffer (OpenGL 3.3 has no default zero named
@@ -229,7 +229,7 @@ void initBuffer(void)
    checkError ("initBuffer");
 }
 
-const ourGLchar *vertexShaderSource[] = {
+static const ourGLchar *vertexShaderSource[] = {
    "#version 140\n",
    "uniform mat4 fg_ProjectionMatrix;\n",
    "in vec4 fg_Color;\n",
@@ -242,7 +242,7 @@ const ourGLchar *vertexShaderSource[] = {
    "}\n"
 };
 
-const ourGLchar *fragmentShaderSource[] = {
+static const ourGLchar *fragmentShaderSource[] = {
    "#version 140\n",
    "smooth in vec4 fg_SmoothColor;\n",
    "out vec4 fg_FragColor;\n",
@@ -252,7 +252,7 @@ const ourGLchar *fragmentShaderSource[] = {
    "}\n"
 };
 
-void compileAndCheck(GLuint shader)
+static void compileAndCheck(GLuint shader)
 {
    GLint status;
    gl_CompileShader (shader);
@@ -268,7 +268,7 @@ void compileAndCheck(GLuint shader)
    }
 }
 
-GLuint compileShaderSource(GLenum type, GLsizei count, const ourGLchar **string)
+static GLuint compileShaderSource(GLenum type, GLsizei count, const ourGLchar **string)
 {
    GLuint shader = gl_CreateShader (type);
    gl_ShaderSource (shader, count, string, NULL);
@@ -276,7 +276,7 @@ GLuint compileShaderSource(GLenum type, GLsizei count, const ourGLchar **string)
    return shader;
 }
 
-void linkAndCheck(GLuint program)
+static void linkAndCheck(GLuint program)
 {
    GLint status;
    gl_LinkProgram (program);
@@ -292,7 +292,7 @@ void linkAndCheck(GLuint program)
    }
 }
 
-GLuint createProgram(GLuint vertexShader, GLuint fragmentShader)
+static GLuint createProgram(GLuint vertexShader, GLuint fragmentShader)
 {
    GLuint program = gl_CreateProgram ();
    if (vertexShader != 0) {
@@ -305,11 +305,11 @@ GLuint createProgram(GLuint vertexShader, GLuint fragmentShader)
    return program;
 }
 
-GLuint fgProjectionMatrixIndex;
-GLuint fgColorIndex;
-GLuint fgVertexIndex;
+static GLuint fgProjectionMatrixIndex;
+static GLuint fgColorIndex;
+static GLuint fgVertexIndex;
 
-void initShader(void)
+static void initShader(void)
 {
    const GLsizei vertexShaderLines = sizeof(vertexShaderSource) / sizeof(ourGLchar*);
    GLuint vertexShader =
@@ -334,13 +334,13 @@ void initShader(void)
    checkError ("initShader");
 }
 
-void initRendering(void)
+static void initRendering(void)
 {
    glClearColor (0.0, 0.0, 0.0, 0.0);
    checkError ("initRendering");
 }
 
-void init(void) 
+static void init(void)
 {
    initExtensionEntries ();
    initBuffer ();
@@ -348,7 +348,7 @@ void init(void)
    initRendering ();
 }
 
-void dumpInfo(void)
+static void dumpInfo(void)
 {
    printf ("Vendor: %s\n", glGetString (GL_VENDOR));
    printf ("Renderer: %s\n", glGetString (GL_RENDERER));
@@ -357,14 +357,14 @@ void dumpInfo(void)
    checkError ("dumpInfo");
 }
 
-const GLvoid *bufferObjectPtr (GLsizei index)
+static const GLvoid *bufferObjectPtr (GLsizei index)
 {
    return (const GLvoid *) (((char *) NULL) + index);
 }
 
 GLfloat projectionMatrix[16];
 
-void triangle(void)
+static void triangle(void)
 {
    gl_UniformMatrix4fv (fgProjectionMatrixIndex, 1, GL_FALSE, projectionMatrix);
 
@@ -377,7 +377,7 @@ void triangle(void)
    checkError ("triangle");
 }
 
-void display(void)
+static void display(void)
 {
    glClear (GL_COLOR_BUFFER_BIT);
    triangle ();
@@ -385,7 +385,7 @@ void display(void)
    checkError ("display");
 }
 
-void loadOrthof(GLfloat *m, GLfloat l, GLfloat r, GLfloat b, GLfloat t,
+static void loadOrthof(GLfloat *m, GLfloat l, GLfloat r, GLfloat b, GLfloat t,
                 GLfloat n, GLfloat f)
 {
    m[ 0] = 2.0f / (r - l);
@@ -409,12 +409,12 @@ void loadOrthof(GLfloat *m, GLfloat l, GLfloat r, GLfloat b, GLfloat t,
    m[15] = 1.0f;
 }
 
-void loadOrtho2Df(GLfloat *m, GLfloat l, GLfloat r, GLfloat b, GLfloat t)
+static void loadOrtho2Df(GLfloat *m, GLfloat l, GLfloat r, GLfloat b, GLfloat t)
 {
    loadOrthof (m, l, r, b, t, -1.0f, 1.0f);
 }
 
-void reshape (int w, int h)
+static void reshape (int w, int h)
 {
    glViewport (0, 0, (GLsizei) w, (GLsizei) h);
    if (w <= h) {
@@ -425,7 +425,7 @@ void reshape (int w, int h)
    checkError ("reshape");
 }
 
-void keyboard(unsigned char key, int x, int y)
+static void keyboard(unsigned char key, int x, int y)
 {
    switch (key) {
       case 27:
@@ -434,10 +434,17 @@ void keyboard(unsigned char key, int x, int y)
    }
 }
 
-void samplemenu(int menuID)
+static void samplemenu(int menuID)
 {}
 
-int main(int argc, char** argv)
+
+
+#if defined(BUILD_MONOLITHIC)
+#define main      fg_smooth_openGL3_demo_main
+#endif
+
+
+int main(int argc, const char **argv)
 {
    int menuA;
    glutInit(&argc, argv);
