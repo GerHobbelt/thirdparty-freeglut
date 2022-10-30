@@ -48,6 +48,7 @@
 
 #include <GL/freeglut.h>
 #include <stdlib.h>
+#include <stdint.h>
 #include "../fg_internal.h"
 
 /* VID=0x046d devices have separate events for motion (translate) and rotate.
@@ -309,9 +310,11 @@ void fgSpaceballHandleWinEvent(HWND hwnd, WPARAM wParam, LPARAM lParam)
         goto cleanUp;
 
     sRidDeviceInfo.cbSize = sizeof(RID_DEVICE_INFO);
+	UINT siz = sRidDeviceInfo.cbSize; // fix GetRawInputDeviceInfo() call: warning C4057 : 'function' : 'PUINT' differs in indirection to slightly different base types from 'DWORD *'
     if( GetRawInputDeviceInfo( pRawInput->header.hDevice, RIDI_DEVICEINFO,
-            &sRidDeviceInfo, &sRidDeviceInfo.cbSize ) == -1 )
+            &sRidDeviceInfo, &siz ) == -1 )
         goto cleanUp;
+	sRidDeviceInfo.cbSize = siz;
     
     /* exit if unknown VID */
     if( sRidDeviceInfo.hid.dwVendorId != VENDOR_LOGI
@@ -399,8 +402,8 @@ void fgSpaceballHandleWinEvent(HWND hwnd, WPARAM wParam, LPARAM lParam)
             for( i = 0; i < fg_sball_bitwise_bits; i++ )
             {
                 /* safe bitwise method to get the i'th bit state */
-                bool stateBefore = (prevBits >> i) & 1;
-                bool stateNow = (nowBits >> i) & 1;
+                BOOL stateBefore = (prevBits >> i) & 1;
+                BOOL stateNow = (nowBits >> i) & 1;
 
                 if( stateBefore && !stateNow ) /* button number = i+1 */
                     INVOKE_WCB( *window, SpaceButton, (i+1, GLUT_UP) );
