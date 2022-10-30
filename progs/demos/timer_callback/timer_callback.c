@@ -31,10 +31,10 @@ struct menu_state_s
 };
 typedef struct menu_state_s menu_state_t;
 
-void disp(void* uptr);
-void timer_func(int which, void* uptr);
+static void disp(void* uptr);
+static void timer_func(int which, void* uptr);
 
-const float color[][3] = {
+static const float color[][3] = {
 	{1, 0, 0},
 	{0, 1, 0},
 	{0, 0, 1},
@@ -42,13 +42,13 @@ const float color[][3] = {
 	{0, 1, 1},
 	{1, 0, 1}
 };
-const int timerInts[] = {
+static const int timerInts[] = {
     250,
     500,
     1000
 };
 
-void createMenuEntries(menu_state_t* menuState)
+static void createMenuEntries(menu_state_t* menuState)
 {
 	int i;
     for (i = 0; i < sizeof(timerInts) / sizeof(*timerInts); i++)
@@ -66,7 +66,7 @@ void createMenuEntries(menu_state_t* menuState)
     }
 }
 
-void updateMenuEntries(menu_state_t* menuState)
+static void updateMenuEntries(menu_state_t* menuState)
 {
 	int i;
     for (i = 0; i < sizeof(timerInts) / sizeof(*timerInts); i++)
@@ -84,7 +84,7 @@ void updateMenuEntries(menu_state_t* menuState)
     }
 }
 
-void MenuHandler(int timerInt, void* user_ptr)
+static void MenuHandler(int timerInt, void* user_ptr)
 {
 	menu_state_t* menuState;
 	
@@ -101,7 +101,13 @@ void MenuHandler(int timerInt, void* user_ptr)
 	updateMenuEntries(menuState);
 }
 
-int main(int argc, char **argv)
+
+
+#if defined(BUILD_MONOLITHIC)
+#define main      fg_timer_callback_demo_main
+#endif
+
+int main(int argc, const char **argv)
 {
 	int timerSurroundInt = 1000, timerCenterInt = 500;
 	display_index_t displayIndex = { 0, 2 };
@@ -137,7 +143,7 @@ int main(int argc, char **argv)
 	return 0;
 }
 
-void disp(void* user_ptr)
+static void disp(void* user_ptr)
 {
 	const display_index_t* displayIndex;
 	int cidx, pcidx;
@@ -158,7 +164,7 @@ void disp(void* user_ptr)
 	glutSwapBuffers();
 }
 
-void timer_func(int which, void* user_ptr)
+static void timer_func(int which, void* user_ptr)
 {
 	const timer_state_t* timerState;
 	
