@@ -199,30 +199,48 @@ do                                                                        \
     SET_WCB( ( *( fgStructure.CurrentWindow ) ), a, callback, userData ); \
 } while( 0 )
 
+
+#if defined(_MSC_VER) /* && defined(NDEBUG) */ && 01
+ // quick harmless hack to ensure MSVC linker doesn't get too smart and does function folding, while NOT CORRECTLY UPDATING the debug info,
+ // which would result in the MSVC debugger jumping to weird locations in the codebase when you step through these keyboard callbacks/handlers.
+ //
+ // You can quickly turn this hack on/off by changing the last bit (`&& 01` <-> `&& 0`) of the #if condition above.
+static const char* m = NULL;
+#define FGLUT_MSVC_SPECIAL_SNOWFLAKE(x)	m = #x
+
+#else
+#define FGLUT_MSVC_SPECIAL_SNOWFLAKE(x)	/* nil */
+#endif
+
+
 /*
  * Types need to be defined for callbacks. It's not ideal, but it works for this.
  */
 #define IMPLEMENT_CALLBACK_FUNC_CB_ARG0(a,b)                              \
 static void fgh##a##FuncCallback( FGCBUserData userData )                 \
 {                                                                         \
+	FGLUT_MSVC_SPECIAL_SNOWFLAKE(fgh##a##FuncCallback);					  \
     FGCB##b* callback = (FGCB##b*)&userData;                              \
     (*callback)();                                                        \
 }
 #define IMPLEMENT_CALLBACK_FUNC_CB_ARG1(a,b)                              \
 static void fgh##a##FuncCallback( int arg1val, FGCBUserData userData )    \
 {                                                                         \
+	FGLUT_MSVC_SPECIAL_SNOWFLAKE(fgh##a##FuncCallback);					  \
     FGCB##b* callback = (FGCB##b*)&userData;                              \
     (*callback)( arg1val );                                               \
 }
 #define IMPLEMENT_CALLBACK_FUNC_CB_ARG2(a,b)                              \
 static void fgh##a##FuncCallback( int arg1val, int arg2val, FGCBUserData userData ) \
 {                                                                         \
+	FGLUT_MSVC_SPECIAL_SNOWFLAKE(fgh##a##FuncCallback);					  \
     FGCB##b* callback = (FGCB##b*)&userData;                              \
     (*callback)( arg1val, arg2val );                                      \
 }
 #define IMPLEMENT_CALLBACK_FUNC_CB_ARG3_USER(a,b,arg1,arg2,arg3)          \
 static void fgh##a##FuncCallback( arg1 arg1val, arg2 arg2val, arg3 arg3val, FGCBUserData userData ) \
 {                                                                         \
+	FGLUT_MSVC_SPECIAL_SNOWFLAKE(fgh##a##FuncCallback);					  \
     FGCB##b* callback = (FGCB##b*)&userData;                              \
     (*callback)( arg1val, arg2val, arg3val );                             \
 }
@@ -230,12 +248,14 @@ static void fgh##a##FuncCallback( arg1 arg1val, arg2 arg2val, arg3 arg3val, FGCB
 #define IMPLEMENT_CALLBACK_FUNC_CB_ARG4(a,b)                              \
 static void fgh##a##FuncCallback( int arg1val, int arg2val, int arg3val, int arg4val, FGCBUserData userData ) \
 {                                                                         \
+	FGLUT_MSVC_SPECIAL_SNOWFLAKE(fgh##a##FuncCallback);					  \
     FGCB##b* callback = (FGCB##b*)&userData;                              \
     (*callback)( arg1val, arg2val, arg3val, arg4val );                    \
 }
 #define IMPLEMENT_CALLBACK_FUNC_CB_ARG5(a,b)                              \
 static void fgh##a##FuncCallback( int arg1val, int arg2val, int arg3val, int arg4val, int arg5val, FGCBUserData userData ) \
 {                                                                         \
+	FGLUT_MSVC_SPECIAL_SNOWFLAKE(fgh##a##FuncCallback);					  \
     FGCB##b* callback = (FGCB##b*)&userData;                              \
     (*callback)( arg1val, arg2val, arg3val, arg4val, arg5val );           \
 }

@@ -809,9 +809,18 @@ static LRESULT fghWindowProcKeyPress(SFG_Window *window, UINT uMsg, GLboolean ke
     
     if(keypress != -1) {
         if(keydown) {
-            INVOKE_WCB(*window, Special,
-                    (keypress, window->State.MouseX, window->State.MouseY));
-        } else {
+			do                                            
+			{                                             
+				if (((*window).CallBacks[WCB_Special]))
+				{                                         
+					FGCBSpecialUC func = (FGCBSpecialUC)(((*window).CallBacks[WCB_Special]));
+					FGCBUserData __userData = ((*window).CallbackDatas[WCB_Special]);
+					char* m = "invoke bugger";
+					fgSetWindow(window);               
+					func (keypress, window->State.MouseX, window->State.MouseY, __userData);
+				}                                         
+			} while (0);
+		} else {
             INVOKE_WCB(*window, SpecialUp,
                     (keypress, window->State.MouseX, window->State.MouseY));
         }
