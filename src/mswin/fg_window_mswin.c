@@ -275,7 +275,7 @@ GLboolean fgSetupPixelFormat( SFG_Window* window, GLboolean checkOnly,
     /* windows hack for multismapling/sRGB */
     if ( ( fgState.DisplayMode & GLUT_MULTISAMPLE ) ||
          ( fgState.DisplayMode & GLUT_SRGB ) )
-    {        
+    {
         HGLRC rc, rc_before=wglGetCurrentContext();
         HWND hWnd;
         HDC hDC, hDC_before=wglGetCurrentDC();
@@ -426,7 +426,7 @@ void fghComputeWindowRectFromClientArea_UseStyle( RECT *clientRect, const DWORD 
         windowRect.left     = clientRect->left;
         windowRect.top      = clientRect->top;
     }
-    
+
     /* done, copy windowRect to output */
     CopyRect(clientRect,&windowRect);
 }
@@ -463,7 +463,7 @@ void fghGetClientArea( RECT *clientRect, const SFG_Window *window, BOOL posIsOut
     POINT topLeftClient = {0,0};
 
     freeglut_return_if_fail((window && window->Window.Handle));
-    
+
     /* Get size of client rect */
     GetClientRect(window->Window.Handle, clientRect);
     if (posIsOutside)
@@ -514,7 +514,7 @@ static BOOL CALLBACK m_proc(HMONITOR mon,
       return TRUE;
 }
 
-/* 
+/*
  * this function returns the origin of the screen identified by
  * fgDisplay.pDisplay.DisplayName, and 0 otherwise.
  * This is used in fgOpenWindow to open the gamemode window on the screen

@@ -101,7 +101,7 @@ void fgPlatformInitialize( const char* displayName )
     /* If we have a DisplayName try to use it for metrics */
     if( fgDisplay.pDisplay.DisplayName )
     {
-        HDC context = CreateDCA(fgDisplay.pDisplay.DisplayName,0,0,0);
+        HDC context = CreateDC(fgDisplay.pDisplay.DisplayName,0,0,0);
         if( context )
         {
         fgDisplay.ScreenWidth  = GetDeviceCaps( context, HORZRES );
