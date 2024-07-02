@@ -21,6 +21,8 @@
 
 #include "fg_common_ogc.h"
 
+#include <ogc/color.h>
+
 void fgOgcDisplaySetupXfb()
 {
     GXRModeObj *vmode = fgDisplay.pDisplay.vmode;
@@ -53,6 +55,7 @@ void fgOgcDisplaySetupVideoMode()
     fgOgcDisplaySetupXfb();
 
     VIDEO_Configure(vmode);
+    VIDEO_ClearFrameBuffer(vmode, fgDisplay.pDisplay.xfb[0], COLOR_BLACK);
     VIDEO_SetNextFramebuffer(fgDisplay.pDisplay.xfb[0]);
     VIDEO_SetBlack(FALSE);
     VIDEO_Flush();
@@ -75,6 +78,8 @@ void fgOgcDisplayShowEFB()
 {
     void *xfb;
     u8 mustClear, mustWait;
+
+    if (ogx_prepare_swap_buffers() < 0) return;
 
     fgOgcCursorDraw();
 

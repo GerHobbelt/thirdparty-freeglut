@@ -70,6 +70,7 @@ Currently supported platforms:
  - MS Windows
  - Android (NDK)
  - BlackBerry
+ - Nintendo GameCube and Wii
 
 Consult the platform-specific readme files for details on the level of support
 and build instructions.
