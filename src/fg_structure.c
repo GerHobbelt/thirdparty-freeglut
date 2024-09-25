@@ -192,7 +192,7 @@ void fgAddToWindowDestroyList( SFG_Window* window )
 /*
  * Function to close down all the windows in the "WindowsToDestroy" list
  */
-void fgCloseWindows( )
+void fgCloseWindows( void )
 {
     while( fgStructure.WindowsToDestroy.First )
     {
