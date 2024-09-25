@@ -15,7 +15,7 @@ static void WindowStatus(int state);
 
 
 
-static void DrawQuad()
+static void DrawQuad(void)
 {
     int width  = glutGet(GLUT_WINDOW_WIDTH);
     int height = glutGet(GLUT_WINDOW_HEIGHT);

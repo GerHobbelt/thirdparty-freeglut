@@ -642,7 +642,7 @@ static void DrawSizeInfo(int *row)
     }
 }
 
-static void drawInfo()
+static void drawInfo(void)
 {
     int row = 1;
     shapesPrintf (row++, 1, "Shape PgUp PgDn: %s", table [function_index].name);

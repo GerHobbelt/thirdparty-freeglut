@@ -459,7 +459,7 @@ char* WMMsg2Str(DWORD dwMessage)
    */
 static fg_time_t lastTime32 = 0;
 static fg_time_t timeEpoch = 0;
-void fgPlatformInitSystemTime()
+void fgPlatformInitSystemTime(void)
 {
 #if defined(_WIN32_WCE)
     lastTime32 = GetTickCount();

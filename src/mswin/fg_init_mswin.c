@@ -33,7 +33,7 @@
 
 extern LRESULT CALLBACK fgPlatformWindowProc( HWND hWnd, UINT uMsg,
                                WPARAM wParam, LPARAM lParam );
-extern void fgPlatformInitSystemTime();
+extern void fgPlatformInitSystemTime(void);
 extern void fghCloseInputDevices(void);
 
 char *fgClipboardBuffer[3] = { NULL, NULL, NULL };
