@@ -225,7 +225,7 @@ void fgSpaceballUpdateDeviceList(void)
 
 #ifdef _DEBUG
         char device_name[1024];
-        printf("dev index: %d type: %d\n",i, pRawInputDeviceList[i].dwType);
+        printf("dev index: %d type: %d\n",i, (int)pRawInputDeviceList[i].dwType);
         if (GetRawInputDeviceInfo(
                 pRawInputDeviceList[i].hDevice,
                 RIDI_DEVICENAME,
@@ -264,7 +264,7 @@ void fgSpaceballUpdateDeviceList(void)
                 }
 #ifdef _DEBUG
             printf( "VID: 0x%04x  PID: 0x%04x  bits: %d  buttons: %d\n",
-                devInfo.hid.dwVendorId, devInfo.hid.dwProductId, 
+                (unsigned int)devInfo.hid.dwVendorId, (unsigned int)devInfo.hid.dwProductId,
                 fg_sball_bitwise_bits, fg_sball_buttons );
 #endif
         }
