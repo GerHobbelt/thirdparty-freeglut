@@ -44,6 +44,11 @@
 #define HOST_NAME_MAX	255
 #endif
 
+static void set_title(Window win, Atom prop, const char *str);
+#ifdef X_HAVE_UTF8_STRING
+static int set_utf8_title(Window win, Atom prop, const char *str);
+#endif
+
 /* Motif window hints, only define needed ones */
 typedef struct
 {
@@ -152,7 +157,6 @@ void fgPlatformOpenWindow( SFG_Window* window, const char* title,
 	Colormap cmap;
 	XVisualInfo * visualInfo = NULL;
 	XSetWindowAttributes wattr;
-	XTextProperty txprop;
 	XSizeHints sizeHints;
 	XWMHints wmHints;
 	XEvent eventReturnBuffer; /* return buffer required for a call */
@@ -394,11 +398,14 @@ done_retry:
 
 	wmHints.flags = StateHint;
 	wmHints.initial_state = fgState.ForceIconic ? IconicState : NormalState;
-	/* Prepare the window and iconified window names... */
-	XStringListToTextProperty((char**)&title, 1, &txprop);
+	XSetWMProperties(dpy, win, 0, 0, 0, 0, &sizeHints, &wmHints, 0);
 
-	XSetWMProperties(dpy, win, &txprop, &txprop, 0, 0, &sizeHints, &wmHints, 0);
-	XFree(txprop.value);
+	set_title(win, XA_WM_NAME, title);
+	set_title(win, XA_WM_ICON_NAME, title);
+#ifdef X_HAVE_UTF8_STRING
+	set_utf8_title(win, fgDisplay.pDisplay.NetWMName, title);
+	set_utf8_title(win, fgDisplay.pDisplay.NetWMIconName, title);
+#endif
 
 	XSetWMProtocols(dpy, win, &fgDisplay.pDisplay.DeleteWindow, 1);
 
@@ -545,46 +552,100 @@ void fgPlatformIconifyWindow( SFG_Window *window )
     fgStructure.CurrentWindow->State.Visible   = GL_FALSE;
 }
 
-/*
- * Set the current window's title
+/* NOTE: about UTF8 in window titles or icon names.
+ *
+ * By the letter of the ICCCM and EHWM specifications, if we wish to set a UTF8
+ * (non-ASCII) name, it should go to _NET_WM_NAME or _NET_WM_ICON_NAME tagged as
+ * UTF8_STRING type, instead of the older WM_NAME/WM_ICON_NAME properties which
+ * should be of type STRING.
+ *
+ * But in case we don't have the Xlib utf8 extensions, or in any case for the
+ * sake of compatibility with old window managers, it's best to always set
+ * WM_NAME/WM_ICON_NAME, regardless of the actual encoding. Modern EWMH-compliant
+ * window managers should ignore WM_NAME if _NET_WM_NAME is also set anyway,
+ * and older window managers can still hope to show something semi-reasonable
+ * in the title-bar (some WMs can cope with utf8 strings mislabeled as STRING in
+ * WM_NAME just fine anyway).
+ *
+ * So we'll set the old ICCCM properties unconditionally, and if we can, we'll
+ * also set the EHWM ones, and hope for the best.
+ *
+ * See git commit d3799755874dfae53540caf75003dfed68738720 for an earlier
+ * attempt to detect and set only one or the other.
  */
-void fgPlatformGlutSetWindowTitle( const char* title )
+
+#ifdef X_HAVE_UTF8_STRING
+/* sets utf8 window title (_NET_WM_NAME or _NET_WM_ICON_NAME) */
+static int set_utf8_title(Window win, Atom prop, const char *str)
 {
-    XTextProperty text;
+	Display *dpy = fgDisplay.pDisplay.Display;
+	XTextProperty text;
 
-    text.value = (unsigned char *) title;
-    text.encoding = XA_STRING;
-    text.format = 8;
-    text.nitems = strlen( title );
+	if(!prop) return -1;
 
-    XSetWMName(
-        fgDisplay.pDisplay.Display,
-        fgStructure.CurrentWindow->Window.Handle,
-        &text
-    );
+	if(Xutf8TextListToTextProperty(dpy, (char**)&str, 1, XUTF8StringStyle, &text) < 0) {
+		return -1;
+	}
+	XChangeProperty(dpy, win, prop, text.encoding, 8, PropModeReplace,
+			(unsigned char*)str, strlen(str));
+	XFree(text.value);
+	return 0;
+}
+#endif	/* X_HAVE_UTF8_STRING */
 
-    XFlush( fgDisplay.pDisplay.Display ); /* XXX Shouldn't need this */
+/* sets WM_NAME and/or WM_ICON_NAME (type STRING) */
+static void set_title(Window win, Atom prop, const char *str)
+{
+	Display *dpy = fgDisplay.pDisplay.Display;
+	XTextProperty text;
+
+	text.value = (unsigned char*)str;
+	text.encoding = XA_STRING;
+	text.format = 8;
+	text.nitems = strlen(str);
+
+	if(prop == XA_WM_NAME) {
+		XSetWMName(dpy, win, &text);
+	} else if(prop == XA_WM_ICON_NAME) {
+		XSetWMIconName(dpy, win, &text);
+	}
+}
+
+/* Set the current window's title */
+void fgPlatformGlutSetWindowTitle(const char *str)
+{
+	Window win = fgStructure.CurrentWindow->Window.Handle;
+	if(!str || !*str) return;
+
+	set_title(win, XA_WM_NAME, str);
+#ifdef X_HAVE_UTF8_STRING
+	if(set_utf8_title(win, fgDisplay.pDisplay.NetWMName, str) == -1) {
+		/* if we failed to set _NET_WM_NAME because it's not a valid utf8 string
+		 * then we should remove the property in case it was set before, so that
+		 * WM_NAME will be used, otherwise _NET_WM_NAME takes precedence
+		 */
+		Display *dpy = fgDisplay.pDisplay.Display;
+		XDeleteProperty(dpy, win, fgDisplay.pDisplay.NetWMName);
+	}
+#endif
 }
 
 /*
  * Set the current window's iconified title
  */
-void fgPlatformGlutSetIconTitle( const char* title )
+void fgPlatformGlutSetIconTitle(const char *str)
 {
-    XTextProperty text;
+	Window win = fgStructure.CurrentWindow->Window.Handle;
+	if(!str || !*str) return;
 
-    text.value = (unsigned char *) title;
-    text.encoding = XA_STRING;
-    text.format = 8;
-    text.nitems = strlen( title );
-
-    XSetWMIconName(
-        fgDisplay.pDisplay.Display,
-        fgStructure.CurrentWindow->Window.Handle,
-        &text
-    );
-
-    XFlush( fgDisplay.pDisplay.Display ); /* XXX Shouldn't need this */
+	set_title(win, XA_WM_ICON_NAME, str);
+#ifdef X_HAVE_UTF8_STRING
+	if(set_utf8_title(win, fgDisplay.pDisplay.NetWMIconName, str) == -1) {
+		/* see fgPlatformGlutSetWindowTitle above */
+		Display *dpy = fgDisplay.pDisplay.Display;
+		XDeleteProperty(dpy, win, fgDisplay.pDisplay.NetWMIconName);
+	}
+#endif
 }
 
 /*

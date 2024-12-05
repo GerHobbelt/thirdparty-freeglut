@@ -65,6 +65,8 @@ struct tagSFG_PlatformDisplay
     int             NetWMSupported;     /* Flag for EWMH Window Managers     */
     Atom            NetWMPid;           /* The _NET_WM_PID atom              */
     Atom            ClientMachine;      /* The client machine name atom      */
+    Atom            NetWMName;          /* _NET_WM_NAME atom                 */
+    Atom            NetWMIconName;      /* _NET_WM_ICON_NAME atom            */
     XIM             IM;                 /* The input method                  */
     XIMStyle        InputStyle;         /* The input method style            */
 
