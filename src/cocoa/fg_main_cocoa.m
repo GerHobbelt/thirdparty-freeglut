@@ -87,8 +87,23 @@ void fgPlatformMainLoopPreliminaryWork( void )
 {
     AUTORELEASE_POOL;
 
-    [NSApp finishLaunching];               // Completes the app launch process
-    [NSApp activateIgnoringOtherApps:YES]; // Bring app to the front
+    static BOOL application_initialized;
+
+    // Initialize the Cocoa application if not already done
+    if ( !application_initialized ) {
+        [NSApp finishLaunching]; // Completes the app launch process
+        application_initialized = YES;
+    }
+
+    // Bring app to the front
+    // Use the modern API which is more reliable than activateIgnoringOtherApps:
+    if ( @available( macOS 10.9, * ) ) {
+        [[NSRunningApplication currentApplication]
+            activateWithOptions:( NSApplicationActivateAllWindows | NSApplicationActivateIgnoringOtherApps )];
+    }
+    else {
+        [NSApp activateIgnoringOtherApps:YES];
+    }
 }
 
 /* Upon initial window creation, do any platform-specific work required for the window */

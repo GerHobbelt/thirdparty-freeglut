@@ -40,6 +40,19 @@ static const double fgWheelThreshold = 1.0; // Threshold for mouse wheel events.
 BOOL shouldQuit = NO;
 
 /*****************************************************************
+ * OpenGL View Interface (aka prototype)                         *
+ *****************************************************************/
+
+@interface                       fgOpenGLView : NSOpenGLView
+@property ( assign ) SFG_Window *fgWindow;
+// Trackers for currently held keys.
+// Special and standard key codes overlap, so we need to track them separately.
+@property ( strong ) NSMutableSet *pressedStandardKeys;
+@property ( strong ) NSMutableSet *pressedSpecialKeys;
+- (void)releaseAllKeys;
+@end
+
+/*****************************************************************
  * Window Delegate                                               *
  *****************************************************************/
 
@@ -72,15 +85,23 @@ BOOL shouldQuit = NO;
         INVOKE_WCB( *self.fgWindow, WindowStatus, ( GLUT_FULLY_COVERED ) );
     }
 }
+
+- (void)windowDidResignKey:(NSNotification *)notification
+{
+    AUTORELEASE_POOL;
+
+    NSWindow     *window = notification.object;
+    fgOpenGLView *view   = (fgOpenGLView *)window.contentView;
+
+    // Release all keys and modifiers since we are going to lose focus
+    [view releaseAllKeys];
+}
+
 @end
 
 /*****************************************************************
- * OpenGL View                                                   *
+ * OpenGL View Implementation                                    *
  *****************************************************************/
-
-@interface                       fgOpenGLView : NSOpenGLView
-@property ( assign ) SFG_Window *fgWindow; // Freeglut’s window structure
-@end
 
 @implementation fgOpenGLView
 
@@ -196,11 +217,25 @@ BOOL shouldQuit = NO;
     return (char)modifierKey;
 }
 
-- (BOOL)acceptsFirstResponder
+- (instancetype)initWithFrame:(NSRect)frameRect pixelFormat:(NSOpenGLPixelFormat *)format
 {
     AUTORELEASE_POOL;
 
-    return YES; // Allow the view to receive keyboard events
+    self = [super initWithFrame:frameRect pixelFormat:format];
+    if ( self ) {
+        _pressedStandardKeys = [[NSMutableSet alloc] init];
+        _pressedSpecialKeys  = [[NSMutableSet alloc] init];
+    }
+    return self;
+}
+
+- (void)dealloc
+{
+    AUTORELEASE_POOL;
+
+    [_pressedStandardKeys release];
+    [_pressedSpecialKeys release];
+    [super dealloc];
 }
 
 #pragma mark Mouse Section
@@ -234,6 +269,15 @@ BOOL shouldQuit = NO;
 
     return YES;
 }
+
+// Unsure if we want this...
+#if 0
+/* Allow the view to receive mouse events for the first click */
+- (BOOL)acceptsFirstMouse:(NSEvent *)event
+{
+    return YES;
+}
+#endif
 
 /* Left button */
 - (void)mouseDown:(NSEvent *)event
@@ -382,6 +426,13 @@ BOOL shouldQuit = NO;
 
 #pragma mark Key Section
 
+- (BOOL)acceptsFirstResponder
+{
+    AUTORELEASE_POOL;
+
+    return YES; // Allow the view to receive keyboard events
+}
+
 - (void)updateModifiers:(NSEvent *)event
 {
     AUTORELEASE_POOL;
@@ -446,9 +497,11 @@ BOOL shouldQuit = NO;
     NSPoint mouseLoc = [self mouseLocation:event fromOutsideEvent:YES];
 
     if ( state == GLUT_DOWN ) {
+        [self.pressedSpecialKeys addObject:@( specialKey )];
         INVOKE_WCB( *self.fgWindow, Special, ( specialKey, mouseLoc.x, mouseLoc.y ) );
     }
     else {
+        [self.pressedSpecialKeys removeObject:@( specialKey )];
         INVOKE_WCB( *self.fgWindow, SpecialUp, ( specialKey, mouseLoc.x, mouseLoc.y ) );
     }
 }
@@ -473,9 +526,11 @@ BOOL shouldQuit = NO;
     NSPoint mouseLoc = [self mouseLocation:event fromOutsideEvent:YES];
 
     if ( isSpecial ) {
+        [self.pressedSpecialKeys addObject:@( convKey )];
         INVOKE_WCB( *self.fgWindow, Special, ( convKey, mouseLoc.x, mouseLoc.y ) );
     }
     else {
+        [self.pressedStandardKeys addObject:@( convKey )];
         INVOKE_WCB( *self.fgWindow, Keyboard, ( convKey, mouseLoc.x, mouseLoc.y ) );
     }
 }
@@ -500,11 +555,39 @@ BOOL shouldQuit = NO;
     NSPoint mouseLoc = [self mouseLocation:event fromOutsideEvent:YES];
 
     if ( isSpecial ) {
+        [self.pressedSpecialKeys removeObject:@( convKey )];
         INVOKE_WCB( *self.fgWindow, SpecialUp, ( convKey, mouseLoc.x, mouseLoc.y ) );
     }
     else {
+        [self.pressedStandardKeys removeObject:@( convKey )];
         INVOKE_WCB( *self.fgWindow, KeyboardUp, ( convKey, mouseLoc.x, mouseLoc.y ) );
     }
+}
+
+- (void)releaseAllKeys
+{
+    AUTORELEASE_POOL;
+
+    NSPoint mouseLoc = [[self window] mouseLocationOutsideOfEventStream];
+    mouseLoc         = [self convertPoint:mouseLoc fromView:nil];
+    int x            = (int)mouseLoc.x;
+    int y            = (int)( self.bounds.size.height - mouseLoc.y );
+
+    // Fire off the callbacks for any pressed keys
+    for ( NSNumber *keyObj in self.pressedStandardKeys ) {
+        char key = [keyObj charValue];
+        INVOKE_WCB( *self.fgWindow, KeyboardUp, ( key, x, y ) );
+    }
+    [self.pressedStandardKeys removeAllObjects];
+
+    for ( NSNumber *keyObj in self.pressedSpecialKeys ) {
+        char key = [keyObj charValue];
+        INVOKE_WCB( *self.fgWindow, SpecialUp, ( key, x, y ) );
+    }
+    [self.pressedSpecialKeys removeAllObjects];
+
+    // Clear modifier state
+    fgState.Modifiers = 0;
 }
 
 #pragma mark -
@@ -729,7 +812,7 @@ void fgPlatformOpenWindow( SFG_Window *window,
     NSRect fullscreenFrame = [NSScreen mainScreen].frame;
     NSRect frame           = NSMakeRect( x, y, sizeUse ? w : 300, sizeUse ? h : 300 );
 
-    fgOpenGLView *openGLView = [[fgOpenGLView alloc] initWithFrame:fullscreenFrame];
+    fgOpenGLView *openGLView = [[fgOpenGLView alloc] initWithFrame:fullscreenFrame pixelFormat:pixelFormat];
     if ( !openGLView ) {
         fgError( "Failed to create fgOpenGLView" );
     }
@@ -759,10 +842,12 @@ void fgPlatformOpenWindow( SFG_Window *window,
                                                          defer:NO];
     [nsWindow setAcceptsMouseMovedEvents:YES];
     [nsWindow setTitle:[NSString stringWithUTF8String:title ? title : "freeglut"]];
+    [nsWindow setReleasedWhenClosed:YES]; // This is the default, but being explicit
     window->Window.Handle = nsWindow;
 
     // use the fgOpenGLView as the content view
     [nsWindow setContentView:openGLView];
+    [openGLView release]; // NSWindow retains a reference so we can release our own
 
     //
     // 4. Set window delegate
@@ -771,6 +856,7 @@ void fgPlatformOpenWindow( SFG_Window *window,
     fgWindowDelegate *delegate = [[fgWindowDelegate alloc] init];
     delegate.fgWindow          = window;
     [nsWindow setDelegate:delegate];
+    [delegate release]; // NSWindow retains a reference so we can release our own
 
     //
     // 5. Create NSOpenGLContext, and associate it with the view
@@ -799,7 +885,8 @@ void fgPlatformOpenWindow( SFG_Window *window,
     //
 
     if ( !window->IsMenu ) {
-        [nsWindow makeKeyAndOrderFront:nil];
+        [NSApp activateIgnoringOtherApps:YES];    // Ensure window is focused
+        [nsWindow makeKeyAndOrderFront:nil];      // Brings window to front
         [nsWindow makeFirstResponder:openGLView]; // Ensure view receives events
         window->State.Visible = GL_TRUE;
     }
@@ -817,16 +904,15 @@ void fgPlatformOpenWindow( SFG_Window *window,
     // 9. Setup CVLinkDisplay for VSync
     //
 
-    // Create and configure CVDisplayLink
+    // Create and configure CVDisplayLink, if not already created
 #ifdef USE_CVDISPLAYLINK
-    if ( fgState.DisplayMode & GLUT_DOUBLE ) {
+    if ( ( fgState.DisplayMode & GLUT_DOUBLE ) && !fgDisplay.pDisplay.DisplayLink ) {
         CVDisplayLinkCreateWithActiveCGDisplays( (CVDisplayLinkRef *)&fgDisplay.pDisplay.DisplayLink );
-        CVDisplayLinkSetOutputCallback(
-            fgDisplay.pDisplay.DisplayLink, &fgDisplayLinkCallback, (__bridge void *)openGLView );
+        CVDisplayLinkSetOutputCallback( fgDisplay.pDisplay.DisplayLink, &fgDisplayLinkCallback, nil );
         CVDisplayLinkStart( fgDisplay.pDisplay.DisplayLink );
     }
 #else
-    // As of macOS 15, VSync is not functional, so CVDisplayLink is the recommended way to handle VSync
+    // As of macOS 26, VSync is not functional, so CVDisplayLink is the recommended way to handle VSync
 
     // Set the swap interval parameter
     GLint swapInterval = 1; // 1 for VSync, 0 for no VSync
@@ -848,15 +934,33 @@ void fgPlatformCloseWindow( SFG_Window *window )
 {
     AUTORELEASE_POOL;
 
-    NSWindow        *nsWindow = (NSWindow *)window->Window.Handle;
-    NSOpenGLContext *context  = (NSOpenGLContext *)window->Window.Context;
+    NSWindow            *nsWindow    = (NSWindow *)window->Window.Handle;
+    NSOpenGLContext     *context     = (NSOpenGLContext *)window->Window.Context;
+    fgOpenGLView        *view        = [nsWindow contentView];
+    fgWindowDelegate    *delegate    = (fgWindowDelegate *)[nsWindow delegate];
+    NSOpenGLPixelFormat *pixelFormat = window->Window.pContext.PixelFormat;
 
+    // 1. Unbind OpenGL context from the view
     [context clearDrawable];
 
+    /*
+     * 2. CRITICAL: Detach the content view before closing the window.
+     *
+     * Closing a window can enqueue deferred AppKit/CoreAnimation work that runs
+     * later on what will be a dangling view/context.
+     */
+    [nsWindow setContentView:nil];
+
+    // 3. Close the Window
     [nsWindow close];
 
+    // 4. Release openGL context and pixel format (view and delegate were already released in OpenWindow)
     [context release];
-    [nsWindow release];
+    [pixelFormat release];
+
+    window->Window.Handle               = nil;
+    window->Window.Context              = nil;
+    window->Window.pContext.PixelFormat = nil;
 }
 
 /*
@@ -871,7 +975,8 @@ void fgPlatformShowWindow( SFG_Window *window )
     if ( [nsWindow isMiniaturized] ) {
         [nsWindow deminiaturize:nil];
     }
-    [nsWindow makeKeyAndOrderFront:nil];
+    [NSApp activateIgnoringOtherApps:YES]; // Ensure window is focused
+    [nsWindow makeKeyAndOrderFront:nil];   // Brings window to front
     window->State.Visible = GL_TRUE;
 }
 
