@@ -779,6 +779,7 @@ ADD_DEMO(timer_callback  progs/demos/timer_callback/timer.c)
 ADD_DEMO(keyboard        progs/demos/keyboard/keyboard.c)
 ADD_DEMO(indexed_color   progs/demos/indexed_color/idxcol.c)
 ADD_DEMO(3dview          progs/demos/3dview/3dview.c)
+ADD_DEMO(accum           progs/demos/accum/accum.c)
 
 #######################
 # INSTALLATION
@@ -862,12 +863,16 @@ INSTALL(
 )
 
 # Install GLUT man pages on Unix-like systems
-IF(UNIX AND FREEGLUT_INSTALL_MAN_PAGES)
-    MESSAGE(STATUS "Including GLUT man pages by Mark Kilgard with permission")
+IF(UNIX)
+    OPTION(FREEGLUT_INSTALL_MAN_PAGES "Install man pages" ON)
 
-    FILE(GLOB MAN_PAGES "${CMAKE_SOURCE_DIR}/man/*.man")
-    FOREACH(MAN_PAGE ${MAN_PAGES})
-        GET_FILENAME_COMPONENT(MAN_NAME ${MAN_PAGE} NAME_WE)
-        INSTALL(FILES ${MAN_PAGE} DESTINATION ${CMAKE_INSTALL_MANDIR}/man3 RENAME "${MAN_NAME}.3")
-    ENDFOREACH()
+    IF(FREEGLUT_INSTALL_MAN_PAGES)
+        MESSAGE(STATUS "Including GLUT man pages by Mark Kilgard with permission")
+
+        FILE(GLOB MAN_PAGES "${CMAKE_SOURCE_DIR}/man/*.man")
+        FOREACH(MAN_PAGE ${MAN_PAGES})
+            GET_FILENAME_COMPONENT(MAN_NAME ${MAN_PAGE} NAME_WE)
+            INSTALL(FILES ${MAN_PAGE} DESTINATION ${CMAKE_INSTALL_MANDIR}/man3 RENAME "${MAN_NAME}.3")
+        ENDFOREACH()
+    ENDIF()
 ENDIF()

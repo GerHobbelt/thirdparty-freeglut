@@ -80,7 +80,28 @@ BOOL shouldQuit = NO;
 
 @implementation fgOpenGLView
 
-+ (char)mapKeyToSpecial:(uint16_t)key
+/*
+ * Standardizes key codes across platforms by mapping macOS-specific key codes
+ * to universal key codes.  This normalization must occur before conversion to special keys to ensure
+ * special keys are handled correctly.
+ */
++ (uint16_t)standardizeKeyCode:(uint16_t)key
+{
+    switch ( key ) {
+    case 0x7F:       // macOS Delete key (forward delete)
+        return 0x08; // Maps to universal Backspace key code
+    default:
+        return (uint16_t)key;
+    }
+}
+
+/*
+ * Handles the conversion of various non-character keys including:
+ * - Arrow keys (up, down, left, right)
+ * - Function keys (F1-F12)
+ * - Navigation keys (Home, End, Page Up/Down, Insert, Delete)
+ */
++ (char)convertFunctionKeyToGlutSpecial:(uint16_t)key
 {
     switch ( key ) {
     case NSUpArrowFunctionKey:
@@ -90,8 +111,8 @@ BOOL shouldQuit = NO;
     case NSLeftArrowFunctionKey:
         return GLUT_KEY_LEFT;
     case NSRightArrowFunctionKey:
-
         return GLUT_KEY_RIGHT;
+
     case NSF1FunctionKey:
         return GLUT_KEY_F1;
     case NSF2FunctionKey:
@@ -128,12 +149,23 @@ BOOL shouldQuit = NO;
     case NSInsertFunctionKey:
     case NSInsertCharFunctionKey:
         return GLUT_KEY_INSERT;
-
     case NSDeleteFunctionKey:
     case NSDeleteCharFunctionKey:
         return GLUT_KEY_DELETE;
+    }
+    return (char)key;
+}
 
-    // undocumented key codes
+/*
+ * Converts macOS modifier key codes to their corresponding GLUT special key constants.
+ *
+ * Note: Modifer key codes overlap standard key codes, so this conversion only applies to
+ * modifier keys.
+ */
++ (char)convertModifierToGlutSpecial:(uint16_t)modifierKey
+{
+    switch ( modifierKey ) {
+    // macOS hardware key codes for modifier keys
     case 0x38: // Left Shift
         return GLUT_KEY_SHIFT_L;
     case 0x3C: // Right Shift
@@ -151,8 +183,7 @@ BOOL shouldQuit = NO;
     case 0x36: // Right Command
         return GLUT_KEY_SUPER_R;
     }
-
-    return (char)key;
+    return (char)modifierKey;
 }
 
 - (BOOL)acceptsFirstResponder
@@ -301,13 +332,11 @@ BOOL shouldQuit = NO;
     // TODO: Decide on a suitable threshold for scrolling events
     // Macos sends a lot of small delta values, so we need to filter them if we want to match the
     // behavior of other platforms
-    if ( fabs( bufferedY ) > fgWheelThreshold ) {
-        int direction = ( bufferedY > 0 ) ? GLUT_UP : GLUT_DOWN;
+    bufferedY += deltaY;
+    while ( fabs( bufferedY ) > fgWheelThreshold ) {
+        int direction = ( bufferedY > 0 ) ? 1 : -1;
         INVOKE_WCB( *self.fgWindow, MouseWheel, ( FG_MOUSE_WHEEL_Y, direction, mouseLoc.x, mouseLoc.y ) );
-        bufferedY = 0.0;
-    }
-    else {
-        bufferedY += deltaY;
+        bufferedY -= direction * fgWheelThreshold;
     }
 }
 
@@ -347,7 +376,7 @@ BOOL shouldQuit = NO;
 
     // now lets notify any special key press callbacks
     int  state      = -1;
-    char specialKey = [fgOpenGLView mapKeyToSpecial:keyCode];
+    char specialKey = [fgOpenGLView convertModifierToGlutSpecial:keyCode];
 
     switch ( specialKey ) {
     case GLUT_KEY_SHIFT_L:
@@ -390,9 +419,10 @@ BOOL shouldQuit = NO;
         return; // Ignore events with no characters
     }
 
-    unichar key       = [[event charactersIgnoringModifiers] characterAtIndex:0];
-    char    convKey   = [fgOpenGLView mapKeyToSpecial:key];
-    BOOL    isSpecial = ( convKey != key );
+    unichar key    = [[event charactersIgnoringModifiers] characterAtIndex:0];
+    key            = [fgOpenGLView standardizeKeyCode:key];
+    char convKey   = [fgOpenGLView convertFunctionKeyToGlutSpecial:key];
+    BOOL isSpecial = ( convKey != key );
 
     NSPoint mouseLoc = [self mouseLocation:event fromOutsideEvent:YES];
 
@@ -414,9 +444,10 @@ BOOL shouldQuit = NO;
         return; // Ignore events with no characters
     }
 
-    uint16_t key       = [[event charactersIgnoringModifiers] characterAtIndex:0];
-    char     convKey   = [fgOpenGLView mapKeyToSpecial:key];
-    BOOL     isSpecial = ( convKey != key );
+    uint16_t key   = [[event charactersIgnoringModifiers] characterAtIndex:0];
+    key            = [fgOpenGLView standardizeKeyCode:key];
+    char convKey   = [fgOpenGLView convertFunctionKeyToGlutSpecial:key];
+    BOOL isSpecial = ( convKey != key );
 
     NSPoint mouseLoc = [self mouseLocation:event fromOutsideEvent:YES];
 
@@ -438,17 +469,37 @@ BOOL shouldQuit = NO;
 {
     [super reshape];
 
-    // TODO: move all these window guards to a separate method or delegate
     if ( !self.fgWindow ) {
         fgError( "Freeglut window not set for %s", __func__ );
     }
 
-    NSWindow *window = self.fgWindow->Window.Handle;
-    NSRect    frame  = [window contentRectForFrameRect:[window frame]];
+    /* Sync the context with the new drawable size. */
+    [(NSOpenGLContext *)self.fgWindow->Window.Context update];
+
+    NSWindow *window        = self.fgWindow->Window.Handle;
+    NSRect    frame         = [window contentRectForFrameRect:[window frame]];
+    NSRect    backingBounds = [self convertRectToBacking:[self bounds]];
+
+    /* Update the window size */
+    SFG_PlatformWindowState *pWState = &self.fgWindow->State.pWState;
+    pWState->FrameBufferWidth        = (int)backingBounds.size.width;
+    pWState->FrameBufferHeight       = (int)backingBounds.size.height;
+
+    /*
+     * Workaround for a macOS OpenGL driver quirk where the accumulation buffer is not automatically
+     * resized in sync with the window. The glClear must be performed here, before the application's
+     * reshape callback is invoked, to prevent rendering from being clipped to the old buffer
+     * dimensions.  The exact reason why this is required is still remains largely a mystery, but
+     * would love to understand it better.
+     */
+    GLint accBits = 0;
+    glGetIntegerv( GL_ACCUM_RED_BITS, &accBits );
+    if ( accBits > 0 )
+        glClear( GL_ACCUM_BUFFER_BIT );
 
     /* Update state and call callback, if there was a change */
     fghOnPositionNotify( self.fgWindow, frame.origin.x, frame.origin.y, GL_FALSE );
-    fghOnReshapeNotify( self.fgWindow, frame.size.width, frame.size.height, GL_FALSE );
+    fghOnReshapeNotify( self.fgWindow, pWState->FrameBufferWidth, pWState->FrameBufferHeight, GL_FALSE );
 }
 
 @end
@@ -519,17 +570,26 @@ void fgPlatformOpenWindow( SFG_Window *window,
     // 0. Sanity Checks
     //
 
+    if ( fgState.ContextFlags & GLUT_DEBUG ) {
+        fgWarning( "WARNING - Debug context requested, but not supported on macOS, ignoring" );
+        fgState.ContextFlags &= ~GLUT_DEBUG;
+    }
+
     if ( !isValidOpenGLContext(
              fgState.MajorVersion, fgState.MinorVersion, fgState.ContextFlags, fgState.ContextProfile ) ) {
-        fgError( "MacOS only supports Compatibility OpenGL 2.1 and below OR OpenGL Core Profile 3.2 through 4.1" );
+        fgError(
+            "ERROR - MacOS only supports Compatibility OpenGL 2.1 and below OR OpenGL Core Profile 3.2 through 4.1" );
     }
 
     //
     // 1. Define pixel format attributes based on fgState.DisplayMode
     //
+    // TODO: Move this to a separate function to support fgPlatformGlutGet(GLUT_DISPLAY_MODE_POSSIBLE)
+    //
 
     NSOpenGLPixelFormatAttribute attrs[32];
     int                          attrIndex = 0;
+    attrs[attrIndex++]                     = NSOpenGLPFAAccelerated; // choose hardware acceleration
     attrs[attrIndex++]                     = NSOpenGLPFAColorSize;
     attrs[attrIndex++]                     = 24; // 8 bits per RGB channel
     attrs[attrIndex++]                     = NSOpenGLPFAAlphaSize;
@@ -552,14 +612,16 @@ void fgPlatformOpenWindow( SFG_Window *window,
         attrs[attrIndex++] = NSOpenGLPFAAccumSize;
         attrs[attrIndex++] = 32;
     }
+    if ( fgState.DisplayMode & GLUT_AUX ) {
+        attrs[attrIndex++] = NSOpenGLPFAAuxBuffers;
+        attrs[attrIndex++] = fghNumberOfAuxBuffersRequested( );
+    }
     if ( fgState.DisplayMode & GLUT_MULTISAMPLE ) {
-        attrs[attrIndex++] = NSOpenGLPFAMultisample;
-        attrs[attrIndex++] = 1;
+        attrs[attrIndex++] = NSOpenGLPFAMultisample; // boolean
         attrs[attrIndex++] = NSOpenGLPFASampleBuffers;
         attrs[attrIndex++] = 1;
-        // TODO make this configurable when glutInitDisplayString implementation is complete eg samples = 4
         attrs[attrIndex++] = NSOpenGLPFASamples;
-        attrs[attrIndex++] = 16;
+        attrs[attrIndex++] = fgState.SampleNumber;
     }
     // profile selection
     attrs[attrIndex++] = NSOpenGLPFAOpenGLProfile;
@@ -578,15 +640,42 @@ void fgPlatformOpenWindow( SFG_Window *window,
     window->Window.pContext.PixelFormat = pixelFormat;
 
     //
-    // 2. Create fgOpenGLView with the pixel format
+    // 2. Create fgOpenGLView without a pixel format (the pixel format is used later in step 5)
     //
 
-    NSRect        frame = NSMakeRect( positionUse ? x : 0, positionUse ? y : 0, sizeUse ? w : 300, sizeUse ? h : 300 );
-    fgOpenGLView *openGLView = [[fgOpenGLView alloc] initWithFrame:frame pixelFormat:pixelFormat];
+    // Flip y coordinate for OpenGL
+    y = positionUse ? fgDisplay.ScreenHeight - y - h : fgDisplay.ScreenHeight - h;
+    x = positionUse ? x : 0;
+
+    //
+    // HACK: The OpenGL accumulation buffer on macOS does not resize with the window. To ensure it's
+    // large enough for any potential size, we initialize the OpenGL context with a fullscreen view.
+    // The window is then immediately resized to the user's requested dimensions after the context
+    // is created. This has minor memory overhead but no performance impact since scissor tests
+    // prevent rendering outside the viewport.
+    //
+    // The user configured frame is set after the OpenGL context is created and made current.
+    //
+    // Note: This is invisible to the user (no flicker) and is applied unconditionally for
+    // simplicity.
+    //
+    NSRect fullscreenFrame = [NSScreen mainScreen].frame;
+    NSRect frame           = NSMakeRect( x, y, sizeUse ? w : 300, sizeUse ? h : 300 );
+
+    fgOpenGLView *openGLView = [[fgOpenGLView alloc] initWithFrame:fullscreenFrame];
     if ( !openGLView ) {
         fgError( "Failed to create fgOpenGLView" );
     }
     openGLView.fgWindow = window; // Link to the FreeGLUT window structure
+
+    // TODO: Make this configurable, and handle transitions between high DPI and low DPI displays
+    // FIXME: High DPI support is not fully implemented yet
+    // Things to verify:
+    //  - mouse coordinates are correct
+    //  - window size is correct
+    //  - OpenGL viewport is correct
+    //  - OpenGL framebuffer size is correct
+    [openGLView setWantsBestResolutionOpenGLSurface:NO];
 
     //
     // 3. Create NSWindow and set fgOpenGLView as content view
@@ -597,7 +686,7 @@ void fgPlatformOpenWindow( SFG_Window *window,
     if ( window->IsMenu || gameMode || ( fgState.DisplayMode & GLUT_BORDERLESS ) ) {
         style = NSWindowStyleMaskBorderless;
     }
-    NSWindow *nsWindow = [[NSWindow alloc] initWithContentRect:frame
+    NSWindow *nsWindow = [[NSWindow alloc] initWithContentRect:fullscreenFrame
                                                      styleMask:style
                                                        backing:NSBackingStoreBuffered
                                                          defer:NO];
@@ -617,14 +706,19 @@ void fgPlatformOpenWindow( SFG_Window *window,
     [nsWindow setDelegate:delegate];
 
     //
-    // 5. Retrieve the NSOpenGLContext from the fgOpenGLView
+    // 5. Create NSOpenGLContext, and associate it with the view
     //
 
-    NSOpenGLContext *glContext = [openGLView openGLContext];
+    NSOpenGLContext *glContext = [[NSOpenGLContext alloc] initWithFormat:pixelFormat shareContext:nil];
     if ( !glContext ) {
-        fgError( "Failed to retrieve NSOpenGLContext from fgOpenGLView" );
+        fgError( "Failed to create NSOpenGLContext" );
     }
+    [glContext setView:openGLView];
     window->Window.Context = glContext;
+
+    // Now that the fullscreen context is created, resize the window to the requested frame.
+    // This triggers the reshape callback, which sets the correct viewport
+    [nsWindow setContentSize:frame.size];
 
     //
     // 6. Make the context current for OpenGL rendering
@@ -666,6 +760,12 @@ void fgPlatformOpenWindow( SFG_Window *window,
             fgDisplay.pDisplay.DisplayLink, &fgDisplayLinkCallback, (__bridge void *)openGLView );
         CVDisplayLinkStart( fgDisplay.pDisplay.DisplayLink );
     }
+#else
+    // As of macOS 15, VSync is not functional, so CVDisplayLink is the recommended way to handle VSync
+
+    // Set the swap interval parameter
+    GLint swapInterval = 1; // 1 for VSync, 0 for no VSync
+    [glContext setValues:&swapInterval forParameter:NSOpenGLContextParameterSwapInterval];
 #endif
 
     DBG( "OpenGL Version: %s", glGetString( GL_VERSION ) );

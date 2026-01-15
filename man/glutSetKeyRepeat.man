@@ -1,7 +1,9 @@
 .\"
 .\" Copyright (c) Mark J. Kilgard, 1998, 2000.
 .\"
-.TH glutSetKeyRepeat 3GLUT "3.8" "GLUT" "GLUT"
+.\" See the file "man/LICENSE" for information on usage and redistribution
+.\"
+.TH glutSetKeyRepeat 3 "April 2025" "freeglut" "freeglut"
 .SH NAME
 glutSetKeyRepeat - sets the key repeat mode
 .SH SYNTAX

@@ -1,7 +1,9 @@
 .\"
 .\" Copyright (c) Mark J. Kilgard, 1996.
 .\"
-.TH glutPositionWindow 3GLUT "3.8" "GLUT" "GLUT"
+.\" See the file "man/LICENSE" for information on usage and redistribution
+.\"
+.TH glutPositionWindow 3 "April 2025" "freeglut" "freeglut"
 .SH NAME
 glutPositionWindow - requests a change to the position of the current window.
 .SH SYNTAX

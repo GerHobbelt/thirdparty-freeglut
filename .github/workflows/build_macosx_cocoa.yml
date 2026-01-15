@@ -1,4 +1,4 @@
-name: MacOS X (X11) build
+name: MacOS X (Cocoa) build
 
 on:
   push:
@@ -15,10 +15,10 @@ jobs:
 
     - name: install dependencies
       run: |
-        brew install xquartz libx11 libxi libxrandr libxxf86vm mesa
+        true
 
     - name: generate makefile
-      run: cmake -DCMAKE_BUILD_TYPE=Release -DFREEGLUT_BUILD_DEMOS=ON -DFREEGLUT_COCOA=OFF -DOPENGL_gl_LIBRARY=/opt/homebrew/lib/libGL.dylib .
+      run: cmake -DCMAKE_BUILD_TYPE=Release -DFREEGLUT_BUILD_DEMOS=ON -DFREEGLUT_COCOA=ON .
 
     - name: build freeglut
       run: make
