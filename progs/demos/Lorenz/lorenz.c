@@ -346,11 +346,6 @@ int main (int argc, const char **argv)
   /* Initialize the random number generator */
   srand ( 1023 ) ;
 
-  /* Set up the OpenGL parameters */
-  glEnable ( GL_DEPTH_TEST ) ;
-  glClearColor ( 0.0, 0.0, 0.0, 0.0 ) ;
-  glClearDepth ( 1.0 ) ;
-
   /* Initialize GLUT */
   glutInitWindowSize ( 600, 600 ) ;
   glutInit ( &pargc, argv ) ;
@@ -364,6 +359,11 @@ int main (int argc, const char **argv)
   glutDisplayFunc ( display_cb ) ;
   glutReshapeFunc ( reshape_cb ) ;
   glutTimerFunc ( 30, timer_cb, 0 ) ;
+
+  /* Set up the OpenGL parameters */
+  glEnable ( GL_DEPTH_TEST ) ;
+  glClearColor ( 0.0, 0.0, 0.0, 0.0 ) ;
+  glClearDepth ( 1.0 ) ;
 
   /* Initialize the attractor:  The easiest way is to call the keyboard callback with an
    * argument of 'r' for Reset.

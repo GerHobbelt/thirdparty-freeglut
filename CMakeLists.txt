@@ -1,5 +1,9 @@
-CMAKE_MINIMUM_REQUIRED(VERSION 3.1 FATAL_ERROR)
+CMAKE_MINIMUM_REQUIRED(VERSION 3.1...3.5 FATAL_ERROR)
 PROJECT(freeglut LANGUAGES C)
+
+#######################
+# CMake Setup
+#######################
 
 if (POLICY CMP0072)
     # This policy sets libOpenGL.so (GLVND) as the default GL library to link
@@ -10,9 +14,6 @@ if (POLICY CMP0072)
     # https://github.com/freeglut/freeglut/pull/147
     cmake_policy(SET CMP0072 NEW)
 endif()
-
-# for multiarch LIBDIR support (requires cmake>=2.8.8)
-INCLUDE(GNUInstallDirs)
 
 # NOTE: On Windows and Cygwin, the dll's are placed in the
 # CMAKE_RUNTIME_OUTPUT_DIRECTORY, while their corresponding import
@@ -52,6 +53,10 @@ OPTION(FREEGLUT_PRINT_ERRORS "Lib prints errors to stderr" ON)
 OPTION(FREEGLUT_PRINT_WARNINGS "Lib prints warnings to stderr" ON)
 #MARK_AS_ADVANCED(FREEGLUT_PRINT_WARNINGS)
 
+#######################
+# PLATFORM DETECTION
+#######################
+
 # option to also copy .pdb files to install directory when executing
 # INSTALL target
 IF(MSVC)
@@ -79,11 +84,25 @@ IF(NOT WIN32)
     OPTION(FREEGLUT_WAYLAND "Use Wayland (no X11)" OFF)
 ENDIF()
 
+OPTION(FREEGLUT_COCOA "Build support for Cocoa" OFF)
+
+# Eventually default to ON when Cocoa is fully supported
+# IF(APPLE)
+#     OPTION(FREEGLUT_COCOA "Build support for Cocoa" ON)
+# ENDIF()
+
 IF(CMAKE_SYSTEM_NAME MATCHES "NintendoWii|NintendoGameCube")
     SET(OGC ON)
 ELSE()
     SET(OGC OFF)
 ENDIF()
+
+#######################
+# SOURCE SELECTION
+#######################
+
+# for multiarch LIBDIR support (requires cmake>=2.8.8)
+INCLUDE(GNUInstallDirs)
 
 SET(FREEGLUT_HEADERS
     include/GL/freeglut.h
@@ -224,6 +243,27 @@ ELSEIF(OGC)
     # Only used in fg_window.c, to declare support for double buffering
     ADD_DEFINITIONS(-DEGL_VERSION_1_0)
 
+ELSEIF(FREEGLUT_COCOA)
+    LIST(APPEND FREEGLUT_SRCS
+        # objc files
+        src/cocoa/fg_cmap_cocoa.m
+        src/cocoa/fg_cursor_cocoa.m
+        src/cocoa/fg_display_cocoa.m
+        src/cocoa/fg_gamemode_cocoa.m
+        src/cocoa/fg_init_cocoa.m
+        src/cocoa/fg_internal_cocoa.h
+        src/cocoa/fg_joystick_cocoa.m
+        src/cocoa/fg_main_cocoa.m
+        src/cocoa/fg_spaceball_cocoa.m
+        src/cocoa/fg_state_cocoa.m
+        src/cocoa/fg_window_cocoa.m
+        # c files
+        src/cocoa/fg_ext_cocoa.c
+        src/cocoa/fg_glut_definitions_cocoa.c
+        src/cocoa/fg_input_devices_cocoa.c
+        src/cocoa/fg_structure_cocoa.c
+    )
+
 ELSE()
     # UNIX (Wayland)
     IF(FREEGLUT_WAYLAND)
@@ -261,7 +301,7 @@ ELSE()
             src/x11/fg_structure_x11.c
             src/x11/fg_window_x11.c
             src/x11/fg_xinput_x11.c
-	    src/x11/fg_cmap_x11.c
+            src/x11/fg_cmap_x11.c
         )
         IF(NOT(FREEGLUT_GLES))
             LIST(APPEND FREEGLUT_SRCS
@@ -293,8 +333,13 @@ IF(FREEGLUT_GLES OR FREEGLUT_WAYLAND)
     )
 ENDIF()
 
+#######################
+# DEPENDENCIES
+#######################
+
 INCLUDE(CheckIncludeFiles)
-IF(UNIX AND NOT(ANDROID OR BLACKBERRY OR FREEGLUT_WAYLAND OR OGC))
+
+IF(UNIX AND NOT(ANDROID OR BLACKBERRY OR FREEGLUT_WAYLAND OR OGC OR FREEGLUT_COCOA))
     FIND_PACKAGE(X11 REQUIRED)
     INCLUDE_DIRECTORIES(${X11_X11_INCLUDE_PATH})
     LIST(APPEND LIBS ${X11_X11_LIB})
@@ -352,7 +397,7 @@ IF(FREEGLUT_GLES)
 ELSE()
     # On OS X, we need to link against the X11 OpenGL libraries, NOT the Cocoa OpenGL libraries.
     # To do that, you need to manually find two of the libraries before calling FindOpenGL
-    if("${CMAKE_SYSTEM_NAME}" STREQUAL "Darwin")
+    if("${CMAKE_SYSTEM_NAME}" STREQUAL "Darwin" AND NOT FREEGLUT_COCOA)
       # get path where X11 libs are
       get_filename_component(X11_LIB_PATH ${X11_Xi_LIB} DIRECTORY)
 
@@ -443,6 +488,17 @@ IF(WIN32)
 
 ENDIF()
 
+IF(FREEGLUT_COCOA)
+    FIND_PACKAGE(OpenGL REQUIRED)
+    INCLUDE_DIRECTORIES(${OPENGL_INCLUDE_DIR})
+    FIND_LIBRARY(OPENGL_FRAMEWORK OpenGL)
+    FIND_LIBRARY(COCOA_FRAMEWORK Cocoa)
+    FIND_LIBRARY(IOKIT_FRAMEWORK IOKit)
+    FIND_LIBRARY(COREVIDEO_FRAMEWORK CoreVideo)
+    LIST(APPEND LIBS ${COCOA_FRAMEWORK} ${OPENGL_FRAMEWORK} ${IOKIT_FRAMEWORK} ${COREVIDEO_FRAMEWORK})
+    SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-deprecated-declarations")
+ENDIF()
+
 IF(CMAKE_COMPILER_IS_GNUCC)
   SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall")
   IF(NOT(ANDROID OR BLACKBERRY OR FREEGLUT_WAYLAND))
@@ -514,6 +570,10 @@ IF(WIN32)
         CONFIGURE_FILE(${CMAKE_CURRENT_SOURCE_DIR}/src/freeglutdll.def.in ${CMAKE_CURRENT_BINARY_DIR}/freeglutdll.def)
     ENDIF()
 ENDIF()
+
+# ######################
+# BUILD OPTIONS
+# ######################
 
 IF(FREEGLUT_BUILD_SHARED_LIBS)
     ADD_LIBRARY(freeglut SHARED ${FREEGLUT_SRCS})
@@ -595,6 +655,10 @@ ELSE()
         ENDIF()
     ENDIF()
 
+    IF(FREEGLUT_COCOA)
+        ADD_DEFINITIONS(-DTARGET_HOST_MACOS_COCOA=1)
+    ENDIF()
+
     IF(FREEGLUT_BUILD_SHARED_LIBS)
       SET_TARGET_PROPERTIES(freeglut PROPERTIES VERSION ${SO_MAJOR}.${SO_MINOR}.${SO_REV} SOVERSION ${SO_MAJOR} OUTPUT_NAME ${LIBNAME})
     ENDIF()
@@ -655,12 +719,13 @@ IF(FREEGLUT_BUILD_STATIC_LIBS)
 ENDIF()
 INSTALL(FILES ${FREEGLUT_HEADERS} DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/GL COMPONENT Devel)
 
-
+########################
+# DEMOS
+########################
 
 # Optionally build demos, on by default.
 option( FREEGLUT_BUILD_DEMOS "Build FreeGLUT demos." ON )
 
-set(DEMO_LIBS ${LIBS})
 if (FREEGLUT_BUILD_DEMOS)
     if (OPENGL_GLU_FOUND)
         list(APPEND DEMO_LIBS ${OPENGL_glu_LIBRARY})
@@ -668,11 +733,6 @@ if (FREEGLUT_BUILD_DEMOS)
         message(FATAL_ERROR "Failed to find the GLU library which is required to build the demos.")
     endif()
 endif()
-
-# lib m for math, not needed on windows
-IF (NOT WIN32)
-    LIST(APPEND DEMO_LIBS m)
-ENDIF()
 
 MACRO(ADD_DEMO name)
     IF( FREEGLUT_BUILD_DEMOS )
@@ -720,7 +780,9 @@ ADD_DEMO(keyboard        progs/demos/keyboard/keyboard.c)
 ADD_DEMO(indexed_color   progs/demos/indexed_color/idxcol.c)
 ADD_DEMO(3dview          progs/demos/3dview/3dview.c)
 
-
+#######################
+# INSTALLATION
+#######################
 
 # pkg-config support, to install at $(libdir)/pkgconfig
 # Define static build dependencies
@@ -798,3 +860,14 @@ INSTALL(
     DESTINATION ${FREEGLUT_INSTALL_CMAKECONFIGDIR}
     COMPONENT Devel
 )
+
+# Install GLUT man pages on Unix-like systems
+IF(UNIX AND FREEGLUT_INSTALL_MAN_PAGES)
+    MESSAGE(STATUS "Including GLUT man pages by Mark Kilgard with permission")
+
+    FILE(GLOB MAN_PAGES "${CMAKE_SOURCE_DIR}/man/*.man")
+    FOREACH(MAN_PAGE ${MAN_PAGES})
+        GET_FILENAME_COMPONENT(MAN_NAME ${MAN_PAGE} NAME_WE)
+        INSTALL(FILES ${MAN_PAGE} DESTINATION ${CMAKE_INSTALL_MANDIR}/man3 RENAME "${MAN_NAME}.3")
+    ENDFOREACH()
+ENDIF()
