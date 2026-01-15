@@ -40,6 +40,8 @@ CVReturn fgDisplayLinkCallback( CVDisplayLinkRef displayLink,
     CVOptionFlags                               *flagsOut,
     void                                        *displayLinkContext )
 {
+    AUTORELEASE_POOL;
+
     static uint64_t FGUNUSED frameCount = 0;
 
     pthread_mutex_lock( &swapMutex );
@@ -63,6 +65,8 @@ CVReturn fgDisplayLinkCallback( CVDisplayLinkRef displayLink,
 
 void fgPlatformGlutSwapBuffers( SFG_PlatformDisplay *pDisplayPtr, SFG_Window *CurrentWindow )
 {
+    AUTORELEASE_POOL;
+
     if ( pDisplayPtr->DisplayLink ) {
 
         /*
@@ -81,4 +85,20 @@ void fgPlatformGlutSwapBuffers( SFG_PlatformDisplay *pDisplayPtr, SFG_Window *Cu
 
     NSOpenGLContext *context = (NSOpenGLContext *)CurrentWindow->Window.Context;
     [context flushBuffer]; // Swap buffers to present the frame
+}
+
+void fgPlatformInitSwapCtl( void )
+{
+    TODO_IMPL;
+}
+
+void fgPlatformSwapInterval( int n )
+{
+    TODO_IMPL;
+}
+
+int fgPlatformExtSupported( const char *ext )
+{
+    TODO_IMPL;
+    return 0;
 }

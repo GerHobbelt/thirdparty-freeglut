@@ -1,8 +1,4 @@
 /*
- * fg_window_mswin.c
- *
- * The Windows-specific mouse cursor related stuff.
- *
  * Copyright (c) 2012 Stephen J. Baker. All Rights Reserved.
  * Written by John F. Fay, <fayjf@sourceforge.net>
  * Creation date: Sun Jan 22, 2012
@@ -33,7 +29,6 @@
 /* The following include file is available from SGI but is not standard:
  *   #include <GL/wglext.h>
  * So we copy the necessary parts out of it.
- * XXX: should local definitions for extensions be put in a separate include file?
  */
 typedef const char * (WINAPI * PFNWGLGETEXTENSIONSSTRINGARBPROC) (HDC hdc);
 
@@ -703,6 +698,8 @@ void fgPlatformOpenWindow( SFG_Window* window, const char* title,
     /* Store title */
     window->State.pWState.WindowTitle = tstr;
 
+	window->Window.pContext.has_swap_ctl_tear = -1;
+
 #if !defined(_WIN32_WCE)
     /* Need to set requested style again, apparently Windows doesn't listen when requesting windows without title bar or borders */
     SetWindowLong(window->Window.Handle, GWL_STYLE, flags);
@@ -788,9 +785,7 @@ void fgPlatformOpenWindow( SFG_Window* window, const char* title,
 }
 
 
-/*
- * Closes a window, destroying the frame and OpenGL context
- */
+/* Closes a window, destroying the frame and OpenGL context */
 void fgPlatformCloseWindow( SFG_Window* window )
 {
     /* Make sure we don't close a window with current context active */
@@ -837,9 +832,7 @@ void fgPlatformHideWindow( SFG_Window* window )
 }
 
 
-/*
- * Set the current window's title
- */
+/* Set the current window's title */
 void fgPlatformGlutSetWindowTitle( const char* title )
 {
     TCHAR* newTitle = fghTstrFromStr(title);
@@ -856,9 +849,7 @@ void fgPlatformGlutSetWindowTitle( const char* title )
     fgStructure.CurrentWindow->State.pWState.WindowTitle = newTitle;
 }
 
-/*
- * Set the current window's iconified title
- */
+/* Set the current window's iconified title */
 void fgPlatformGlutSetIconTitle( const char* title )
 {
     TCHAR* newTitle = fghTstrFromStr(title);
@@ -873,8 +864,6 @@ void fgPlatformGlutSetIconTitle( const char* title )
     fgStructure.CurrentWindow->State.pWState.IconTitle = newTitle;
 }
 
-
-/* -- PLATFORM-SPECIFIC INTERFACE FUNCTION -------------------------------------------------- */
 
 int FGAPIENTRY __glutCreateWindowWithExit( const char *title, void (__cdecl *exit_function)(int) )
 {

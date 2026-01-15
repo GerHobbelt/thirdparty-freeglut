@@ -1,8 +1,4 @@
 /*
- * fg_internal_mswin.h
- *
- * The freeglut library private include file.
- *
  * Copyright (c) 2012 Stephen J. Baker. All Rights Reserved.
  * Written by John F. Fay, <fayjf@sourceforge.net>
  * Creation date: Thu Jan 19, 2012
@@ -85,10 +81,19 @@ typedef HWND    SFG_WindowHandleType;
 typedef HGLRC   SFG_WindowContextType;
 typedef HPALETTE SFG_WindowColormapType;
 
+typedef const char *(*wgl_getextstr_func)(void);
+typedef BOOL (WINAPI *wgl_swapint_func)(int);
+
 typedef struct tagSFG_PlatformContext SFG_PlatformContext;
-struct tagSFG_PlatformContext
-{
-    HDC             Device;             /* The window's device context */
+struct tagSFG_PlatformContext {
+	HDC Device;             /* The window's device context */
+
+	/* extension entry points are context-specific on windows, so we'll keep
+	 * them here
+	 */
+	wgl_getextstr_func wgl_get_extensions_string;
+	wgl_swapint_func wgl_swap_interval;
+	int has_swap_ctl_tear;
 };
 
 
@@ -136,7 +141,6 @@ struct tagSFG_PlatformJoystick
 #define  FREEGLUT_MENU_PEN_HBACK_COLORS  {0.15f, 0.15f, 0.45f, 1.0f}
 
 
-/* -- PRIVATE FUNCTION DECLARATIONS ---------------------------------------- */
 /* Spaceball device functions, defined in fg_spaceball_mswin.c */
 /* Added by Jinrong Xie <stonexjr at gmail.com> 12/24/2014 */
 /* Modified by Shane Saxon. Dec 2020 */
@@ -146,7 +150,7 @@ void fgSpaceballHandleWinEvent(HWND hwnd, WPARAM wParam, LPARAM lParam);
 /* Function to be called on exit */
 extern void (__cdecl *__glutExitFunc)( int return_value );
 
-// Defined in fg_window_mswin.c
+/* Defined in fg_window_mswin.c */
 TCHAR* fghTstrFromStr(const char* str);
 
 #endif  /* FREEGLUT_INTERNAL_MSWIN_H */

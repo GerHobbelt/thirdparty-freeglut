@@ -1,8 +1,4 @@
 /*
- * fg_init_mswin.c
- *
- * The Windows-specific mouse cursor related stuff.
- *
  * Copyright (c) 2012 Stephen J. Baker. All Rights Reserved.
  * Written by John F. Fay, <fayjf@sourceforge.net>
  * Creation date: Thu Jan 19, 2012
@@ -39,9 +35,6 @@ extern void fghCloseInputDevices(void);
 char *fgClipboardBuffer[3] = { NULL, NULL, NULL };
 
 
-/*
- * A call to this function should initialize all the display stuff...
- */
 void fgPlatformInitialize( const char* displayName )
 {
     WNDCLASS wc;
@@ -140,7 +133,6 @@ void fgPlatformInitialize( const char* displayName )
 
 
 
-/* Platform-Specific Deinitialization Functions: */
 void fgPlatformDeinitialiseInputDevices ( void )
 {
 #if !defined(_WIN32_WCE)
@@ -174,8 +166,6 @@ void fgPlatformDestroyContext ( SFG_PlatformDisplay pDisplay, SFG_WindowContextT
 {
     /* Do nothing -- this is required for X11 */
 }
-
-/* -- PLATFORM-SPECIFIC INTERFACE FUNCTION -------------------------------------------------- */
 
 void (__cdecl *__glutExitFunc)( int return_value ) = NULL;
 

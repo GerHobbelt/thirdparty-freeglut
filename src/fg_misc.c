@@ -1,8 +1,4 @@
 /*
- * fg_misc.c
- *
- * Functions that didn't fit anywhere else...
- *
  * Copyright (c) 1999-2000 Pawel W. Olszta. All Rights Reserved.
  * Written by Pawel W. Olszta, <olszta@sourceforge.net>
  * Creation date: Thu Dec 9 1999
@@ -25,6 +21,7 @@
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
+#include <ctype.h>
 #include <GL/freeglut.h>
 #include "fg_internal.h"
 
@@ -35,44 +32,47 @@ float fgPlatformGetColor(int idx, int comp);
 void fgPlatformCopyColormap(int win);
 
 
-/* -- INTERFACE FUNCTIONS -------------------------------------------------- */
-
-/*
- * This functions checks if an OpenGL extension is supported or not
- *
- * XXX Wouldn't this be simpler and clearer if we used strtok()?
- */
-int FGAPIENTRY glutExtensionSupported( const char* extension )
+int FGAPIENTRY glutExtensionSupported(const char *ext)
 {
-  const char *extensions, *start;
-  const size_t len = strlen( extension );
+	const char *str;
 
-  /* Make sure there is a current window, and thus a current context available */
-  FREEGLUT_EXIT_IF_NOT_INITIALISED ( "glutExtensionSupported" );
-  freeglut_return_val_if_fail( fgStructure.CurrentWindow != NULL, 0 );
+	/* Make sure there is a current window, and thus a current context available */
+	FREEGLUT_EXIT_IF_NOT_INITIALISED("glutExtensionSupported");
+	freeglut_return_val_if_fail(fgStructure.CurrentWindow != NULL, 0);
 
-  if (strchr(extension, ' '))
-    return 0;
-  start = extensions = (const char *) glGetString(GL_EXTENSIONS);
-
-  /* XXX consider printing a warning to stderr that there's no current
-   * rendering context.
-   */
-  freeglut_return_val_if_fail( extensions != NULL, 0 );
-
-  while (1) {
-     const char *p = strstr(extensions, extension);
-     if (!p)
-        return 0;  /* not found */
-     /* check that the match isn't a super string */
-     if ((p == start || p[-1] == ' ') && (p[len] == ' ' || p[len] == 0))
-        return 1;
-     /* skip the false match and continue */
-     extensions = p + len;
-  }
-
-  return 0 ;
+	if((str = (const char*)glGetString(GL_EXTENSIONS)) && fgMatchExt(str, ext)) {
+		return 1;
+	}
+	return fgPlatformExtSupported(ext);
 }
+
+int fgMatchExt(const char *extlist, const char *name)
+{
+	const char *eptr;
+
+	/* cleanup any preceding spaces from name */
+	while(*name && isspace(*name)) name++;
+
+	while(*extlist) {
+		/* move extlist to the start of the next extension */
+		while(*extlist && isspace(*extlist)) extlist++;
+
+		/* keep looping as long as both match each other */
+		eptr = name;
+		while(*extlist && !isspace(*extlist) && *eptr && *extlist == *eptr) {
+			extlist++;
+			eptr++;
+		}
+		/* if both are at their end, we found it */
+		if((!*extlist || isspace(*extlist)) && !*eptr) {
+			return 1;
+		}
+		/* otherwise skip to the next extension to try to match next */
+		while(*extlist && !isspace(*extlist)) extlist++;
+	}
+	return 0;
+}
+
 
 #ifndef GL_INVALID_FRAMEBUFFER_OPERATION
 #ifdef GL_INVALID_FRAMEBUFFER_OPERATION_EXT
@@ -98,9 +98,7 @@ int FGAPIENTRY glutExtensionSupported( const char* extension )
 #endif
 #endif
 
-/*
- * A cut-down local version of gluErrorString to avoid depending on GLU.
- */
+/* A cut-down local version of gluErrorString to avoid depending on GLU */
 static const char* fghErrorString( GLenum error )
 {
   switch ( error ) {
@@ -119,9 +117,7 @@ static const char* fghErrorString( GLenum error )
   }
 }
 
-/*
- * This function reports all the OpenGL errors that happened till now
- */
+/* This function reports all the OpenGL errors that happened till now */
 void FGAPIENTRY glutReportErrors( void )
 {
     GLenum error;
@@ -130,9 +126,6 @@ void FGAPIENTRY glutReportErrors( void )
         fgWarning( "GL error: %s", fghErrorString( error ) );
 }
 
-/*
- * Control the auto-repeat of keystrokes to the current window
- */
 void FGAPIENTRY glutIgnoreKeyRepeat( int ignore )
 {
     FREEGLUT_EXIT_IF_NOT_INITIALISED ( "glutIgnoreKeyRepeat" );
@@ -170,31 +163,20 @@ void FGAPIENTRY glutSetKeyRepeat( int repeatMode )
     }
 }
 
-/*
- *
- */
 void FGAPIENTRY glutSetColor(int idx, GLfloat r, GLfloat g, GLfloat b)
 {
 	FREEGLUT_EXIT_IF_NOT_INITIALISED ( "glutSetColor" );
 	fgPlatformSetColor(idx, r, g, b);
 }
 
-/*
- *
- */
 GLfloat FGAPIENTRY glutGetColor(int idx, int component)
 {
 	FREEGLUT_EXIT_IF_NOT_INITIALISED ( "glutGetColor" );
 	return fgPlatformGetColor(idx, component);
 }
 
-/*
- *
- */
 void FGAPIENTRY glutCopyColormap(int window)
 {
 	FREEGLUT_EXIT_IF_NOT_INITIALISED ( "glutCopyColormap" );
 	fgPlatformCopyColormap(window);
 }
-
-/*** END OF FILE ***/

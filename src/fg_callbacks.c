@@ -1,8 +1,4 @@
 /*
- * fg_callbacks.c
- *
- * The callbacks setting methods.
- *
  * Copyright (c) 1999-2000 Pawel W. Olszta. All Rights Reserved.
  * Written by Pawel W. Olszta, <olszta@sourceforge.net>
  * Creation date: Fri Dec 3 1999
@@ -27,13 +23,6 @@
 
 #include <GL/freeglut.h>
 #include "fg_internal.h"
-
-/* -- INTERFACE FUNCTIONS -------------------------------------------------- */
-
-
-/*
- * Global callbacks.
- */
 
 /* Sets the global idle callback */
 void FGAPIENTRY glutIdleFuncUcall( FGCBIdleUC callback, FGCBUserData userData )
@@ -332,5 +321,3 @@ void FGAPIENTRY glutSpaceballButtonFuncUcall( FGCBSpaceButtonUC callback, FGCBUs
 }
 
 IMPLEMENT_GLUT_CALLBACK_FUNC_ARG2_2NAME(SpaceballButton, SpaceButton)
-
-/*** END OF FILE ***/
