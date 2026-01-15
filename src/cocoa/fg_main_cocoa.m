@@ -24,6 +24,18 @@
 
 void fgPlatformSetWindow( SFG_Window *window );
 
+extern void fghOnReshapeNotify( SFG_Window *window, int width, int height, GLboolean forceNotify );
+extern void fghOnPositionNotify( SFG_Window *window, int x, int y, GLboolean forceNotify );
+extern void fgPlatformFullScreenToggle( SFG_Window *win );
+extern void fgPlatformPositionWindow( SFG_Window *window, int x, int y );
+extern void fgPlatformReshapeWindow( SFG_Window *window, int width, int height );
+extern void fgPlatformPushWindow( SFG_Window *window );
+extern void fgPlatformPopWindow( SFG_Window *window );
+
+extern void fgPlatformHideWindow( SFG_Window *window );
+extern void fgPlatformIconifyWindow( SFG_Window *window );
+extern void fgPlatformShowWindow( SFG_Window *window );
+
 fg_time_t fgPlatformSystemTime( void )
 {
     uint64_t now_ns = clock_gettime_nsec_np( CLOCK_REALTIME );
@@ -77,20 +89,43 @@ void fgPlatformMainLoopPreliminaryWork( void )
     [NSApp activateIgnoringOtherApps:YES]; // Bring app to the front
 }
 
-/* deal with work list items */
+/* Upon initial window creation, do any platform-specific work required for the window */
 void fgPlatformInitWork( SFG_Window *window )
 {
-    PART_IMPL;
-    // NSWindow *nsWindow = (NSWindow *)window->Window.Handle;
-    // Placeholder for initialization tasks
+    /* Not required at present */
 }
 
 void fgPlatformPosResZordWork( SFG_Window *window, unsigned int workMask )
 {
-    TODO_IMPL;
+    if ( workMask & GLUT_FULL_SCREEN_WORK )
+        fgPlatformFullScreenToggle( window );
+    if ( workMask & GLUT_POSITION_WORK )
+        fgPlatformPositionWindow( window, window->State.DesiredXpos, window->State.DesiredYpos );
+    if ( workMask & GLUT_SIZE_WORK )
+        fgPlatformReshapeWindow( window, window->State.DesiredWidth, window->State.DesiredHeight );
+    if ( workMask & GLUT_ZORDER_WORK ) {
+        if ( window->State.DesiredZOrder < 0 )
+            fgPlatformPushWindow( window );
+        else
+            fgPlatformPopWindow( window );
+    }
 }
 
 void fgPlatformVisibilityWork( SFG_Window *window )
 {
-    TODO_IMPL;
+    SFG_Window *win = window;
+    switch ( window->State.DesiredVisibility ) {
+    case DesireHiddenState:
+        fgPlatformHideWindow( window );
+        break;
+    case DesireIconicState:
+        /* Call on top-level window */
+        while ( win->Parent )
+            win = win->Parent;
+        fgPlatformIconifyWindow( win );
+        break;
+    case DesireNormalState:
+        fgPlatformShowWindow( window );
+        break;
+    }
 }

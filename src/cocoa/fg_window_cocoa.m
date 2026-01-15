@@ -509,13 +509,24 @@ BOOL shouldQuit = NO;
  */
 void fgPlatformReshapeWindow( SFG_Window *window, int width, int height )
 {
-    printf( "fgPlatformReshapeWindow, width: %d, height: %d\n", width, height );
+    if ( !window ) {
+        fgError( "Invalid window passed to fgPlatformReshapeWindow" );
+    }
+
+    // Resize the window to the specified dimensions
     NSWindow *nsWindow = (NSWindow *)window->Window.Handle;
+    if ( !nsWindow ) {
+        fgError( "Invalid NSWindow handle in fgPlatformReshapeWindow" );
+    }
+
     [nsWindow setContentSize:NSMakeSize( width, height )];
 
-    // Update OpenGL viewport
-    [(NSOpenGLContext *)window->Window.Context makeCurrentContext];
-    glViewport( 0, 0, width, height );
+    fgOpenGLView *openGLView = (fgOpenGLView *)nsWindow.contentView;
+    if ( !openGLView ) {
+        fgError( "Invalid OpenGLView in fgPlatformReshapeWindow" );
+    }
+
+    [openGLView reshape];
 }
 
 BOOL isValidOpenGLContext( int MajorVersion, int MinorVersion, int ContextFlags, int ContextProfile )
@@ -716,9 +727,10 @@ void fgPlatformOpenWindow( SFG_Window *window,
     [glContext setView:openGLView];
     window->Window.Context = glContext;
 
-    // Now that the fullscreen context is created, resize the window to the requested frame.
+    // Now that the fullscreen context is created, resize and position the window to the requested frame.
     // This triggers the reshape callback, which sets the correct viewport
     [nsWindow setContentSize:frame.size];
+    [nsWindow setFrameOrigin:frame.origin];
 
     //
     // 6. Make the context current for OpenGL rendering
@@ -739,9 +751,6 @@ void fgPlatformOpenWindow( SFG_Window *window,
     //
     // 8. Store initial window size
     //
-
-    window->State.pWState.OldWidth  = frame.size.width;
-    window->State.pWState.OldHeight = frame.size.height;
 
     // Get the actual framebuffer dimensions
     NSRect backingBounds                    = [openGLView convertRectToBacking:[openGLView bounds]];
@@ -797,7 +806,13 @@ void fgPlatformCloseWindow( SFG_Window *window )
  */
 void fgPlatformShowWindow( SFG_Window *window )
 {
-    TODO_IMPL;
+    NSWindow *nsWindow = (NSWindow *)window->Window.Handle;
+
+    if ( [nsWindow isMiniaturized] ) {
+        [nsWindow deminiaturize:nil];
+    }
+    [nsWindow makeKeyAndOrderFront:nil];
+    window->State.Visible = GL_TRUE;
 }
 
 /*
@@ -805,7 +820,9 @@ void fgPlatformShowWindow( SFG_Window *window )
  */
 void fgPlatformHideWindow( SFG_Window *window )
 {
-    TODO_IMPL;
+    NSWindow *nsWindow = (NSWindow *)window->Window.Handle;
+    [nsWindow orderOut:nil];
+    window->State.Visible = GL_FALSE;
 }
 
 /*
@@ -813,7 +830,9 @@ void fgPlatformHideWindow( SFG_Window *window )
  */
 void fgPlatformIconifyWindow( SFG_Window *window )
 {
-    TODO_IMPL;
+    NSWindow *nsWindow = (NSWindow *)window->Window.Handle;
+    [nsWindow miniaturize:nil];
+    window->State.Visible = GL_FALSE;
 }
 
 /*
@@ -821,7 +840,8 @@ void fgPlatformIconifyWindow( SFG_Window *window )
  */
 void fgPlatformGlutSetWindowTitle( const char *str )
 {
-    TODO_IMPL;
+    NSWindow *nsWindow = (NSWindow *)fgStructure.CurrentWindow->Window.Handle;
+    [nsWindow setTitle:[NSString stringWithUTF8String:str]];
 }
 
 /*
@@ -829,7 +849,10 @@ void fgPlatformGlutSetWindowTitle( const char *str )
  */
 void fgPlatformGlutSetIconTitle( const char *str )
 {
-    TODO_IMPL;
+    NSWindow *nsWindow = (NSWindow *)fgStructure.CurrentWindow->Window.Handle;
+
+    // you cannot set the icon title on macOS, but you can set the miniwindow title
+    [nsWindow setMiniwindowTitle:[NSString stringWithUTF8String:str]];
 }
 
 /*
@@ -837,7 +860,23 @@ void fgPlatformGlutSetIconTitle( const char *str )
  */
 void fgPlatformPositionWindow( SFG_Window *window, int x, int y )
 {
-    TODO_IMPL;
+    SFG_PlatformWindowState *pWState = &window->State.pWState;
+
+    if ( !pWState ) {
+        fgError( "Invalid platform window state in fgPlatformPositionWindow" );
+    }
+
+    // Need to flip y coordinate for Cocoa, which uses a bottom-left origin
+    // Note: fgDisplay.ScreenHeight excludes menu bar
+    NSWindow *nsWindow = (NSWindow *)window->Window.Handle;
+    NSRect    frame    = [nsWindow frame];
+
+#ifdef ANIMATE_WINDOW_POSITION
+    frame.origin = NSMakePoint( x, fgDisplay.ScreenHeight - y - frame.size.height );
+    [nsWindow setFrame:frame display:YES animate:YES];
+#else
+    [nsWindow setFrameOrigin:NSMakePoint( x, fgDisplay.ScreenHeight - y - frame.size.height )];
+#endif
 }
 
 /*
@@ -845,7 +884,8 @@ void fgPlatformPositionWindow( SFG_Window *window, int x, int y )
  */
 void fgPlatformPushWindow( SFG_Window *window )
 {
-    TODO_IMPL;
+    NSWindow *nsWindow = (NSWindow *)window->Window.Handle;
+    [nsWindow orderBack:nil];
 }
 
 /*
@@ -853,7 +893,8 @@ void fgPlatformPushWindow( SFG_Window *window )
  */
 void fgPlatformPopWindow( SFG_Window *window )
 {
-    TODO_IMPL;
+    NSWindow *nsWindow = (NSWindow *)window->Window.Handle;
+    [nsWindow orderFront:nil];
 }
 
 /*
@@ -861,7 +902,8 @@ void fgPlatformPopWindow( SFG_Window *window )
  */
 void fgPlatformFullScreenToggle( SFG_Window *win )
 {
-    TODO_IMPL;
+    NSWindow *nsWindow = (NSWindow *)win->Window.Handle;
+    [nsWindow toggleFullScreen:nil];
 }
 
 void fgPlatformSetWindow( SFG_Window *window )
