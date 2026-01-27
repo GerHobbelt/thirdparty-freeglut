@@ -4,6 +4,7 @@
 #include <ctype.h>
 #include <stdbool.h>
 
+
 #define MAX_LINE 16384
 #define MAX_HEADERS 500
 
@@ -34,7 +35,7 @@ typedef struct {
 } Config;
 
 // StringBuilder functions
-StringBuilder* sb_create(void) {
+static StringBuilder* sb_create(void) {
     StringBuilder *sb = malloc(sizeof(StringBuilder));
     sb->capacity = 8192;
     sb->size = 0;
@@ -43,7 +44,7 @@ StringBuilder* sb_create(void) {
     return sb;
 }
 
-void sb_append(StringBuilder *sb, const char *str) {
+static void sb_append(StringBuilder *sb, const char *str) {
     size_t len = strlen(str);
     while (sb->size + len + 1 > sb->capacity) {
         sb->capacity *= 2;
@@ -53,7 +54,7 @@ void sb_append(StringBuilder *sb, const char *str) {
     sb->size += len;
 }
 
-void sb_append_char(StringBuilder *sb, char c) {
+static void sb_append_char(StringBuilder *sb, char c) {
     if (sb->size + 2 > sb->capacity) {
         sb->capacity *= 2;
         sb->text = realloc(sb->text, sb->capacity);
@@ -62,17 +63,17 @@ void sb_append_char(StringBuilder *sb, char c) {
     sb->text[sb->size] = '\0';
 }
 
-void sb_free(StringBuilder *sb) {
+static void sb_free(StringBuilder *sb) {
     free(sb->text);
     free(sb);
 }
 
 // Header list functions
-void headers_init(HeaderList *list) {
+static void headers_init(HeaderList *list) {
     list->count = 0;
 }
 
-void headers_add(HeaderList *list, int level, const char *text, const char *anchor) {
+static void headers_add(HeaderList *list, int level, const char *text, const char *anchor) {
     if (list->count >= MAX_HEADERS) return;
 
     Header *h = &list->headers[list->count++];
@@ -81,7 +82,7 @@ void headers_add(HeaderList *list, int level, const char *text, const char *anch
     h->anchor = strdup(anchor);
 }
 
-void headers_free(HeaderList *list) {
+static void headers_free(HeaderList *list) {
     for (int i = 0; i < list->count; i++) {
         free(list->headers[i].text);
         free(list->headers[i].anchor);
@@ -89,7 +90,7 @@ void headers_free(HeaderList *list) {
 }
 
 // Generate anchor ID from header text
-char* generate_anchor(const char *text) {
+static char* generate_anchor(const char *text) {
     static char anchor[256];
     int j = 0;
 
@@ -110,7 +111,7 @@ char* generate_anchor(const char *text) {
 }
 
 // Utility functions
-char *trim(char *str) {
+static char *trim(char *str) {
     char *end;
     while(isspace((unsigned char)*str)) str++;
     if(*str == 0) return str;
@@ -121,7 +122,7 @@ char *trim(char *str) {
 }
 
 // Extract text content from HTML tags (removes all tags)
-void extract_text_content(const char *html, StringBuilder *output) {
+static void extract_text_content(const char *html, StringBuilder *output) {
     const char *p = html;
     while (*p) {
         if (*p == '<') {
@@ -159,7 +160,7 @@ void extract_text_content(const char *html, StringBuilder *output) {
 }
 
 // Convert inline HTML to markdown
-void convert_inline_html(const char *html, StringBuilder *output) {
+static void convert_inline_html(const char *html, StringBuilder *output) {
     const char *p = html;
 
     while (*p) {
@@ -238,7 +239,7 @@ void convert_inline_html(const char *html, StringBuilder *output) {
                         href[href_len] = '\0';
 
                         p = tag_end + 1;
-                        const char *link_end = strcasestr(p, "</a>");
+                        const char *link_end = strstr(p, "</a>");
                         if (link_end) {
                             char link_text[512];
                             size_t text_len = link_end - p;
@@ -308,7 +309,7 @@ void convert_inline_html(const char *html, StringBuilder *output) {
 }
 
 // Convert HTML to Markdown (for API documentation)
-void html_to_markdown(const char *html, StringBuilder *output, HeaderList *headers, Config *config) {
+static void html_to_markdown(const char *html, StringBuilder *output, HeaderList *headers, Config *config) {
     const char *p = html;
     int list_depth = 0;
     int ordered_list[10] = {0};
@@ -388,7 +389,7 @@ void html_to_markdown(const char *html, StringBuilder *output, HeaderList *heade
                 skip_to_body = false;
 
                 p = tag_end + 1;
-                const char *h1_end = strcasestr(p, "</h1>");
+                const char *h1_end = strstr(p, "</h1>");
                 if (h1_end) {
                     char heading[512];
                     size_t len = h1_end - p;
@@ -406,7 +407,7 @@ void html_to_markdown(const char *html, StringBuilder *output, HeaderList *heade
 
                     // Check if this is the header to skip
                     if (config->skip_h1_header &&
-                        strcasestr(heading_text, config->skip_h1_header)) {
+                        strstr(heading_text, config->skip_h1_header)) {
                         skipping_contents = true;
                         sb_free(temp);
                         p = h1_end + 5;
@@ -446,7 +447,7 @@ void html_to_markdown(const char *html, StringBuilder *output, HeaderList *heade
             // H2 headings
             if (strncmp(tag, "<h2", 3) == 0) {
                 p = tag_end + 1;
-                const char *h2_end = strcasestr(p, "</h2>");
+                const char *h2_end = strstr(p, "</h2>");
                 if (h2_end) {
                     char heading[512];
                     size_t len = h2_end - p;
@@ -483,7 +484,7 @@ void html_to_markdown(const char *html, StringBuilder *output, HeaderList *heade
             // H3 headings
             if (strncmp(tag, "<h3", 3) == 0) {
                 p = tag_end + 1;
-                const char *h3_end = strcasestr(p, "</h3>");
+                const char *h3_end = strstr(p, "</h3>");
                 if (h3_end) {
                     char heading[512];
                     size_t len = h3_end - p;
@@ -520,7 +521,7 @@ void html_to_markdown(const char *html, StringBuilder *output, HeaderList *heade
             // Pre-formatted code blocks
             if (strncmp(tag, "<pre", 4) == 0) {
                 p = tag_end + 1;
-                const char *pre_end = strcasestr(p, "</pre>");
+                const char *pre_end = strstr(p, "</pre>");
                 if (pre_end) {
                     if (in_paragraph) {
                         sb_append(output, "\n\n");
@@ -582,7 +583,7 @@ void html_to_markdown(const char *html, StringBuilder *output, HeaderList *heade
                     while (*p == '\n' || *p == '\r') p++;
 
                     // Find the closing </tt>
-                    const char *tt_end = strcasestr(p, "</tt>");
+                    const char *tt_end = strstr(p, "</tt>");
                     if (tt_end) {
                         // Extract content between <tt> and </tt>
                         char content[8192];
@@ -896,7 +897,7 @@ process_text:
 }
 
 // Generate table of contents from headers
-void generate_toc(HeaderList *headers, StringBuilder *output) {
+static void generate_toc(HeaderList *headers, StringBuilder *output) {
     sb_append(output, "## Table of Contents\n\n");
 
     for (int i = 0; i < headers->count; i++) {
@@ -924,7 +925,7 @@ void generate_toc(HeaderList *headers, StringBuilder *output) {
     sb_append(output, "\n---\n\n");
 }
 
-void print_usage(const char *prog_name) {
+static void print_usage(const char *prog_name) {
     printf("Usage: %s [OPTIONS] <input_file> <output_file>\n\n", prog_name);
     printf("Convert HTML to Markdown.\n\n");
     printf("OPTIONS:\n");
@@ -943,7 +944,14 @@ void print_usage(const char *prog_name) {
             prog_name);
 }
 
-int main(int argc, char *argv[]) {
+
+
+#if defined(BUILD_MONOLITHIC)
+#define main      fg_html2md_main
+#endif
+
+int main(int argc, const char** argv)
+{
     Config config = {
         .skip_h1_header = NULL,
         .generate_toc = false,

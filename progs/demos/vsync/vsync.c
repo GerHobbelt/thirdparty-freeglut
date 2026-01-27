@@ -20,18 +20,18 @@
 #include <windows.h>
 #endif
 
-void display(void);
-void idle(void);
-void reshape(int x, int y);
-void keypress(unsigned char key, int x, int y);
+static void display(void);
+static void idle(void);
+static void reshape(int x, int y);
+static void keypress(unsigned char key, int x, int y);
 
-int interv = 1;
-int win_width, win_height;
-long delay;
-const char *exttext[8];
-int exttext_width;
+static int interv = 1;
+static int win_width, win_height;
+static long delay;
+static const char *exttext[8];
+static int exttext_width;
 
-const char *check_ext[] = {
+static const char *check_ext[] = {
 #ifdef BUILD_UNIX
 	"GLX_EXT_swap_control", "GLX_EXT_swap_control_tear",
 	"GLX_MESA_swap_control", "GLX_SGI_swap_control",
@@ -43,7 +43,13 @@ const char *check_ext[] = {
 };
 
 
-int main(int argc, char **argv)
+
+
+#if defined(BUILD_MONOLITHIC)
+#define main      fg_vsync_demo_main
+#endif
+
+int main(int argc, const char** argv)
 {
 	int i, len, n = 0;
 
@@ -75,7 +81,7 @@ int main(int argc, char **argv)
 	return 0;
 }
 
-void display(void)
+static void display(void)
 {
 	static long nframes, prev_fps_upd;
 	static char fpsbuf[128], text[128];
@@ -147,12 +153,12 @@ void display(void)
 	glFinish();
 }
 
-void idle(void)
+static void idle(void)
 {
 	glutPostRedisplay();
 }
 
-void reshape(int x, int y)
+static void reshape(int x, int y)
 {
 	float aspect = (float)x / (float)y;
 	win_width = x;
@@ -164,7 +170,7 @@ void reshape(int x, int y)
 	glOrtho(-aspect, aspect, -1, 1, -1, 1);
 }
 
-void keypress(unsigned char key, int x, int y)
+static void keypress(unsigned char key, int x, int y)
 {
 	switch(key) {
 	case 27:

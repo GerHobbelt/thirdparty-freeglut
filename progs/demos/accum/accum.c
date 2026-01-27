@@ -26,13 +26,13 @@
 #include <GL/freeglut.h>
 
 /* Application state */
-float deg_per_frame = 6.0f;
-float len           = 0.5f;
-float width         = 1.0f;
-int   accum         = 1;
-int   accum_passes  = 8;
-int   defer_scale;
-int   paused;
+static float deg_per_frame = 6.0f;
+static float len           = 0.5f;
+static float width         = 1.0f;
+static int   accum         = 1;
+static int   accum_passes  = 8;
+static int   defer_scale;
+static int   paused;
 
 /* Key bindings */
 #define INC_PASSES_KEY  'y'
@@ -51,14 +51,20 @@ int   paused;
 #define BLEND_KEY       'b'
 #define QUIT_KEY        27
 
-void reshape( int x, int y );
-void display( void );
-void timer( int value );
-void render_shape( void );
-void show_current_configuration( void );
-void keypress( unsigned char key, int x, int y );
+static void reshape( int x, int y );
+static void display( void );
+static void timer( int value );
+static void render_shape( void );
+static void show_current_configuration( void );
+static void keypress( unsigned char key, int x, int y );
 
-int main( int argc, char **argv )
+
+
+#if defined(BUILD_MONOLITHIC)
+#define main      fg_accum_demo_main
+#endif
+
+int main(int argc, const char** argv)
 {
     glutInit( &argc, argv );
     glutInitDisplayMode( GLUT_RGBA | GLUT_DOUBLE | GLUT_ACCUM );
@@ -82,18 +88,18 @@ int main( int argc, char **argv )
     return 0;
 }
 
-void reshape( int x, int y )
+static void reshape( int x, int y )
 {
     glViewport( 0, 0, x, y );
 }
 
-void timer( int value )
+static void timer( int value )
 {
     glutPostRedisplay( );
     glutTimerFunc( 100 / 60, timer, 0 );
 }
 
-void display( void )
+static void display( void )
 {
     int   i;
     float deg_per_render = accum ? deg_per_frame / accum_passes : deg_per_frame;
@@ -121,7 +127,7 @@ void display( void )
     glutSwapBuffers( );
 }
 
-void render_shape( void )
+static void render_shape( void )
 {
     glLineWidth( width );
     glBegin( GL_LINES );
@@ -132,7 +138,7 @@ void render_shape( void )
     glEnd( );
 }
 
-void show_current_configuration( void )
+static void show_current_configuration( void )
 {
     char  buffer[512];
     char *buf = buffer;
@@ -168,7 +174,7 @@ void show_current_configuration( void )
     glPopMatrix( );
 }
 
-void keypress( unsigned char key, int x, int y )
+static void keypress( unsigned char key, int x, int y )
 {
     switch ( key ) {
     case INC_ANGLE_KEY:

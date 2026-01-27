@@ -25,7 +25,7 @@ typedef struct {
 } HeaderList;
 
 // StringBuilder functions
-StringBuilder* sb_create(void) {
+static StringBuilder* sb_create(void) {
     StringBuilder *sb = malloc(sizeof(StringBuilder));
     sb->capacity = 8192;
     sb->size = 0;
@@ -34,7 +34,7 @@ StringBuilder* sb_create(void) {
     return sb;
 }
 
-void sb_append(StringBuilder *sb, const char *str) {
+static void sb_append(StringBuilder *sb, const char *str) {
     size_t len = strlen(str);
     while (sb->size + len + 1 > sb->capacity) {
         sb->capacity *= 2;
@@ -44,7 +44,7 @@ void sb_append(StringBuilder *sb, const char *str) {
     sb->size += len;
 }
 
-void sb_append_char(StringBuilder *sb, char c) {
+static void sb_append_char(StringBuilder *sb, char c) {
     if (sb->size + 2 > sb->capacity) {
         sb->capacity *= 2;
         sb->text = realloc(sb->text, sb->capacity);
@@ -53,17 +53,17 @@ void sb_append_char(StringBuilder *sb, char c) {
     sb->text[sb->size] = '\0';
 }
 
-void sb_free(StringBuilder *sb) {
+static void sb_free(StringBuilder *sb) {
     free(sb->text);
     free(sb);
 }
 
 // Header list functions
-void headers_init(HeaderList *list) {
+static void headers_init(HeaderList *list) {
     list->count = 0;
 }
 
-void headers_add(HeaderList *list, int level, const char *text, const char *anchor) {
+static void headers_add(HeaderList *list, int level, const char *text, const char *anchor) {
     if (list->count >= MAX_HEADERS) return;
 
     Header *h = &list->headers[list->count++];
@@ -72,7 +72,7 @@ void headers_add(HeaderList *list, int level, const char *text, const char *anch
     h->anchor = strdup(anchor);
 }
 
-void headers_free(HeaderList *list) {
+static void headers_free(HeaderList *list) {
     for (int i = 0; i < list->count; i++) {
         free(list->headers[i].text);
         free(list->headers[i].anchor);
@@ -80,7 +80,7 @@ void headers_free(HeaderList *list) {
 }
 
 // Utility functions
-char *trim(char *str) {
+static char *trim(char *str) {
     char *end;
     while(isspace((unsigned char)*str)) str++;
     if(*str == 0) return str;
@@ -93,7 +93,7 @@ char *trim(char *str) {
 // Extract anchor name from markdown link header
 // e.g., "## 2. Introduction" -> "Introduction"
 // or "### 3.1 Design Philosophy" -> "Design Philosophy"
-char* extract_anchor_name(const char *header_text) {
+static char* extract_anchor_name(const char *header_text) {
     static char anchor[256];
     const char *p = header_text;
 
@@ -112,7 +112,7 @@ char* extract_anchor_name(const char *header_text) {
 }
 
 // Generate anchor ID for Table of Contents (simplified version)
-char* generate_toc_anchor(const char *text) {
+static char* generate_toc_anchor(const char *text) {
     static char anchor[256];
     static char temp[256];
     const char *p = text;
@@ -185,7 +185,7 @@ char* generate_toc_anchor(const char *text) {
 }
 
 // Escape special HTML characters
-void append_escaped(StringBuilder *sb, const char *text) {
+static void append_escaped(StringBuilder *sb, const char *text) {
     for (const char *p = text; *p; p++) {
         switch (*p) {
             case '<':
@@ -207,7 +207,7 @@ void append_escaped(StringBuilder *sb, const char *text) {
 }
 
 // Convert inline markdown to HTML
-void convert_inline_md(const char *md, StringBuilder *output) {
+static void convert_inline_md(const char *md, StringBuilder *output) {
     const char *p = md;
 
     while (*p) {
@@ -333,7 +333,7 @@ void convert_inline_md(const char *md, StringBuilder *output) {
 }
 
 // Convert TOC list to HTML and return pointer to where TOC ends
-const char* convert_toc_to_html(const char *md, StringBuilder *output) {
+static const char* convert_toc_to_html(const char *md, StringBuilder *output) {
     char line[MAX_LINE];
     bool in_toc = false;
     int ol_depth = 0;
@@ -483,7 +483,7 @@ const char* convert_toc_to_html(const char *md, StringBuilder *output) {
 }
 
 // Convert markdown to HTML
-void markdown_to_html(const char *md, StringBuilder *output) {
+static void markdown_to_html(const char *md, StringBuilder *output) {
     const char *p = md;
     char line[MAX_LINE];
     bool in_paragraph = false;
@@ -1530,7 +1530,7 @@ process_line:
     }
 }
 
-void print_usage(const char *prog_name) {
+static void print_usage(const char *prog_name) {
     printf("Usage: %s <input_md_file> <output_php_file>\n\n", prog_name);
     printf("Convert Markdown to PHP/HTML.\n\n");
     printf("ARGUMENTS:\n");
@@ -1540,7 +1540,14 @@ void print_usage(const char *prog_name) {
     printf("  %s api.md docs/api.php\n", prog_name);
 }
 
-int main(int argc, char *argv[]) {
+
+
+#if defined(BUILD_MONOLITHIC)
+#define main      fg_md2html_main
+#endif
+
+int main(int argc, const char** argv)
+{
     if (argc != 3) {
         print_usage(argv[0]);
         return 1;

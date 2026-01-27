@@ -37,13 +37,13 @@
 #define NUM_WINDOWS     ARRAY_SIZE( winGeom )
 #define WIN_SZ          200
 
-const int CALIBRATION_DELAY  = 500;
-const int VELOCITY           = 3;
-const int ICONIFY_TRIGGER_MS = 3 * 1000;
+static const int CALIBRATION_DELAY  = 500;
+static const int VELOCITY           = 3;
+static const int ICONIFY_TRIGGER_MS = 3 * 1000;
 
 /* clang-format off */
-int win1, win2, win3, win4, win5;
-struct geom {
+static int win1, win2, win3, win4, win5;
+static struct geom {
     int x, y;
     int w, h;
 } winGeom[] = {
@@ -61,7 +61,7 @@ struct geom {
 enum overlap { NO_OVERLAP, X_OVERLAP, Y_OVERLAP };
 
 /* Returns the axis with the smaller penetration depth. */
-enum overlap overlaps_axis( struct geom *a, struct geom *b )
+static enum overlap overlaps_axis( struct geom *a, struct geom *b )
 {
     int          x_overlap, y_overlap;
     struct geom *max_x, *min_x, *max_y, *min_y;
@@ -89,7 +89,7 @@ enum overlap overlaps_axis( struct geom *a, struct geom *b )
     return Y_OVERLAP;
 }
 
-void update_window_geometry( void )
+static void update_window_geometry( void )
 {
     static int calibrated;
     static int offset_x, offset_y;
@@ -131,7 +131,7 @@ void update_window_geometry( void )
 }
 
 /* Move the window, bouncing off screen edges and other windows */
-void move_window( int value )
+static void move_window( int value )
 {
     static int x_dir[NUM_WINDOWS];
     static int y_dir[NUM_WINDOWS];
@@ -189,7 +189,7 @@ done:
     glutPositionWindow( next_x, next_y );
 }
 
-void display( void )
+static void display( void )
 {
     static int frames[NUM_WINDOWS];
     static int starttime[NUM_WINDOWS];
@@ -272,7 +272,7 @@ void display( void )
 }
 
 /* Timer function to update all windows and move them around the screen */
-void timer( int a )
+static void timer( int a )
 {
     static int minimized = 0;
     int        runtime   = glutGet( GLUT_ELAPSED_TIME ) % ( 3 * ICONIFY_TRIGGER_MS );
@@ -339,7 +339,7 @@ void timer( int a )
     glutTimerFunc( 16, timer, 0 ); /* approx 60 fps */
 }
 
-void global_info( void )
+static void global_info( void )
 {
     int size = 0, i = 0;
     int *array = NULL;
@@ -374,7 +374,7 @@ void global_info( void )
 #endif
 }
 
-void window_info( void )
+static void window_info( void )
 {
     printf( "------------------- Window %d Info ------------------\n", glutGetWindow( ) );
     printf( "  GLUT_ELAPSED_TIME: %d\n", glutGet( GLUT_ELAPSED_TIME ) );
@@ -387,7 +387,7 @@ void window_info( void )
 #endif
 }
 
-int create_window( int id )
+static int create_window( int id )
 {
     int  win;
     char title[32];
@@ -408,7 +408,13 @@ int create_window( int id )
     return win;
 }
 
-int main( int argc, char **argv )
+
+
+#if defined(BUILD_MONOLITHIC)
+#define main      fg_windows_demo_main
+#endif
+
+int main(int argc, const char** argv)
 {
     glutInit( &argc, argv );
     glutInitDisplayMode( GLUT_SINGLE | GLUT_RGBA );
