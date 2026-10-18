@@ -43,14 +43,20 @@ static const float RECT_COL[]   = {0.25f, 0.30f, 0.40f};
 static const float TEXT_COL[]   = {0.55f, 0.60f, 0.70f};
 static const float BORDER_COL[] = {0.70f, 0.75f, 0.85f};
 
-void display( void );
-void mouse( int button, int state, int x, int y );
-void motion( int x, int y );
-void keyboard( unsigned char key, int x, int y );
+static void display( void );
+static void mouse( int button, int state, int x, int y );
+static void motion( int x, int y );
+static void keyboard( unsigned char key, int x, int y );
 
-int main( int argc, char **argv )
+
+
+#if defined(BUILD_MONOLITHIC)
+#define main      fg_cursors_demo_main
+#endif
+
+int main(int argc, const char** argv)
 {
-    glutInit( &argc, argv );
+	glutInit( &argc, argv );
     glutInitDisplayMode( GLUT_RGB | GLUT_DOUBLE );
     glutInitWindowSize( 400, 400 );
     glutCreateWindow( "resize cursors demo" );
@@ -66,7 +72,7 @@ int main( int argc, char **argv )
 }
 
 /* Convert window pixels to clip coordinates. */
-void toClip( int x, int y, float *cx, float *cy )
+static void toClip( int x, int y, float *cx, float *cy )
 {
     *cx = 2.0f * x / glutGet( GLUT_WINDOW_WIDTH  ) - 1.0f;
     *cy = 1.0f - 2.0f * y / glutGet( GLUT_WINDOW_HEIGHT );
@@ -74,7 +80,7 @@ void toClip( int x, int y, float *cx, float *cy )
 
 /* Choose the appropriate cursor for a point based on its position relative to
  * the rectangle. */
-int resizeCursorAt( float x, float y )
+static int resizeCursorAt( float x, float y )
 {
     int onLeft, onRight, onTop, onBottom;
 
@@ -100,13 +106,13 @@ int resizeCursorAt( float x, float y )
     return GLUT_CURSOR_CYCLE;
 }
 
-float clamp( float v, float lo, float hi )
+static float clamp( float v, float lo, float hi )
 {
     return v < lo ? lo : ( v > hi ? hi : v );
 }
 
 /* Resize by applying deltas to the starting rectangle, clamp to keep it on-screen. */
-void applyDrag( float x, float y )
+static void applyDrag( float x, float y )
 {
     float dx = x - g_dragX;
     float dy = y - g_dragY;
@@ -137,7 +143,7 @@ void applyDrag( float x, float y )
 
 /* Calculates the angle of the spinning rectangle. Called from a timer when the
  * center of the rentangle is clicked */
-void animateSpin( int start )
+static void animateSpin( int start )
 {
     float elapsed = (float)( glutGet( GLUT_ELAPSED_TIME ) - start );
     float t       = elapsed / SPIN_MS;
@@ -170,7 +176,7 @@ void animateSpin( int start )
     glutPostRedisplay( );
 }
 
-void display( void )
+static void display( void )
 {
     float w = (float)glutGet( GLUT_WINDOW_WIDTH  );
     float h = (float)glutGet( GLUT_WINDOW_HEIGHT );
@@ -215,7 +221,7 @@ void display( void )
     glutSwapBuffers( );
 }
 
-void motion( int x, int y )
+static void motion( int x, int y )
 {
     float cx, cy;
     int   cursor;
@@ -233,7 +239,7 @@ void motion( int x, int y )
     glutPostRedisplay( );
 }
 
-void mouse( int button, int state, int x, int y )
+static void mouse( int button, int state, int x, int y )
 {
     float cx, cy;
     int   cursor;
@@ -265,7 +271,7 @@ void mouse( int button, int state, int x, int y )
     glutSetCursor( g_dragCursor != GLUT_CURSOR_INHERIT ? g_dragCursor : cursor );
 }
 
-void keyboard( unsigned char key, int x, int y )
+static void keyboard( unsigned char key, int x, int y )
 {
     if( key == 27 || key == 'q' || key == 'Q' )
         exit( EXIT_SUCCESS );

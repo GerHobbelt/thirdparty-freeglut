@@ -53,14 +53,20 @@ static const float EXTENDED_CLR[] = { 0.6, 0.9, 0.6f };
 
 /* ======================================================================== */
 
-void bitmapPrintf( float x, float y, void *font, const char *fmt, ... );
-void reshape( int w, int h );
-void keyboard( unsigned char key, int x, int y );
-void display( void );
+static void bitmapPrintf( float x, float y, void *font, const char *fmt, ... );
+static void reshape( int w, int h );
+static void keyboard( unsigned char key, int x, int y );
+static void display( void );
 
-int main( int argc, char **argv )
+
+
+#if defined(BUILD_MONOLITHIC)
+#define main      fg_fonts_demo_main
+#endif
+
+int main(int argc, const char** argv)
 {
-    glutInit( &argc, argv );
+	glutInit( &argc, argv );
     glutInitDisplayMode( GLUT_DOUBLE | GLUT_RGB );
     glutInitWindowSize( win_width, win_height );
     glutCreateWindow( "freeglut Bitmap Character Table" );
@@ -75,7 +81,7 @@ int main( int argc, char **argv )
 
 /* ======================================================================== */
 
-void bitmapPrintf( float x, float y, void *font, const char *fmt, ... )
+static void bitmapPrintf( float x, float y, void *font, const char *fmt, ... )
 {
     char    buf[256];
     va_list args;
@@ -91,7 +97,7 @@ void bitmapPrintf( float x, float y, void *font, const char *fmt, ... )
     glutBitmapString( font, (const unsigned char *)buf );
 }
 
-void reshape( int w, int h )
+static void reshape( int w, int h )
 {
     win_width  = w;
     win_height = h;
@@ -105,7 +111,7 @@ void reshape( int w, int h )
     glutPostRedisplay( );
 }
 
-void keyboard( unsigned char key, int x, int y )
+static void keyboard( unsigned char key, int x, int y )
 {
     switch ( key ) {
     case 'n':
@@ -124,7 +130,7 @@ void keyboard( unsigned char key, int x, int y )
     glutPostRedisplay( );
 }
 
-void display( void )
+static void display( void )
 {
     int           col, row, rowIdx;
     int           char_w, char_h;
