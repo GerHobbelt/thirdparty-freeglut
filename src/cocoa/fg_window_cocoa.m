@@ -58,6 +58,7 @@ BOOL shouldQuit = NO;
 
 @interface                       fgWindowDelegate : NSObject <NSWindowDelegate>
 @property ( assign ) SFG_Window *fgWindow; // Freeglut’s window structure
+@property ( assign ) BOOL        closeRequested;
 @end
 
 @implementation fgWindowDelegate
@@ -66,9 +67,34 @@ BOOL shouldQuit = NO;
 {
     AUTORELEASE_POOL;
 
-    glutDestroyWindow( self.fgWindow->ID ); // Freeglut’s window cleanup
-    shouldQuit = YES;
-    return YES;
+    //
+    // Keep ownership/lifetime under freeglut control. AppKit closes the
+    // NSWindow immediately if we return YES, but freeglut destroys windows
+    // later via the WindowsToDestroy queue handled in fgCloseWindows.
+    //
+    if ( !self.fgWindow ) {
+        return YES;
+    }
+
+    if ( self.closeRequested ) { // idempotent guard
+        fgWarning( "Window close already requested" );
+    }
+    else {
+        self.closeRequested = YES;
+        glutDestroyWindow( self.fgWindow->ID ); // Queue freeglut cleanup
+        shouldQuit = YES;
+
+        // Handle ActionOnWindowClose the same way X11 and Windows do
+        if ( fgState.ActionOnWindowClose == GLUT_ACTION_EXIT ) {
+            fgDeinitialize( );
+            exit( 0 );
+        }
+        else if ( fgState.ActionOnWindowClose == GLUT_ACTION_GLUTMAINLOOP_RETURNS ) {
+            fgState.ExecState = GLUT_EXEC_STATE_STOP;
+        }
+    }
+
+    return NO;
 }
 
 - (void)windowDidChangeOcclusionState:(NSNotification *)notification
@@ -240,6 +266,22 @@ BOOL shouldQuit = NO;
 
 #pragma mark Mouse Section
 
+// Emulate mouse button mapping based on modifier keys
++ (int)mapMouseButton:(NSEvent *)event button:(int)button
+{
+    if ( button != GLUT_LEFT_BUTTON )
+        return button;
+
+    switch ( [event modifierFlags] & NSEventModifierFlagDeviceIndependentFlagsMask ) {
+    case NSEventModifierFlagControl:
+        return GLUT_RIGHT_BUTTON;
+    case NSEventModifierFlagOption:
+        return GLUT_MIDDLE_BUTTON;
+    default:
+        return GLUT_LEFT_BUTTON;
+    }
+}
+
 - (NSPoint)mouseLocation:(NSEvent *)event fromOutsideEvent:(BOOL)fromOutside
 {
     AUTORELEASE_POOL;
@@ -334,6 +376,8 @@ BOOL shouldQuit = NO;
     if ( !self.fgWindow ) {
         fgError( "Freeglut window not set for %s", __func__ );
     }
+
+    button = [self.class mapMouseButton:event button:button];
 
     NSPoint mouseLoc = [self mouseLocation:event fromOutsideEvent:NO];
     INVOKE_WCB( *self.fgWindow, Mouse, ( button, state, mouseLoc.x, mouseLoc.y ) );
@@ -518,8 +562,15 @@ BOOL shouldQuit = NO;
         return; // Ignore events with no characters
     }
 
-    unichar key    = [[event charactersIgnoringModifiers] characterAtIndex:0];
-    key            = [fgOpenGLView standardizeKeyCode:key];
+    // Only ignore the modifiers if we are dealing with unicode or non-ascii
+    // keys. This allows things like ctrl-r to be mapped to 0x12 instead of
+    // being treated like 'r' pressed with the ctrl modifier.
+    unichar key = [[event characters] characterAtIndex:0];
+    if ( [[event characters] length] > 1 || key > 0x7F ) {
+        key = [[event charactersIgnoringModifiers] characterAtIndex:0];
+    }
+    key = [fgOpenGLView standardizeKeyCode:key];
+
     char convKey   = [fgOpenGLView convertFunctionKeyToGlutSpecial:key];
     BOOL isSpecial = ( convKey != key );
 
@@ -547,8 +598,12 @@ BOOL shouldQuit = NO;
         return; // Ignore events with no characters
     }
 
-    uint16_t key   = [[event charactersIgnoringModifiers] characterAtIndex:0];
-    key            = [fgOpenGLView standardizeKeyCode:key];
+    unichar key = [[event characters] characterAtIndex:0];
+    if ( [[event characters] length] > 1 || key > 0x7F ) {
+        key = [[event charactersIgnoringModifiers] characterAtIndex:0];
+    }
+    key = [fgOpenGLView standardizeKeyCode:key];
+
     char convKey   = [fgOpenGLView convertFunctionKeyToGlutSpecial:key];
     BOOL isSpecial = ( convKey != key );
 
